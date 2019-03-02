@@ -3,17 +3,24 @@
 //--------------------------------------------------------------
 void ofApp::setup(){
   
+    ofSetFrameRate(30);
     // setup camera
     video.setDeviceID( 0 );
     video.setDesiredFrameRate( 30 );
     video.initGrabber( 1280, 720 );
 
-    // setup dnn network for object detection. Case.SSD
+    // setup dnn network for object detection. Case: Yolov2-tiny
+    detector.setNetworkImageSize(416, 416);
+    detector.setup(ofToDataPath("yolov2-tiny.cfg"),
+                   ofToDataPath("yolov2-tiny.weights"),
+                   ofToDataPath("coco.txt"));
+    // setup dnn network for object detection. Case: SSD-MobileNet
+    /*
     detector.setNetworkImageSize(300, 300);
     detector.setup(ofToDataPath("MobileNetSSD_deploy.prototxt"),
                ofToDataPath("MobileNetSSD_deploy.caffemodel"),
                ofToDataPath("voc.list"));
-    
+    */
     detector.setConfidenceThreshold(0.6);
 }
 

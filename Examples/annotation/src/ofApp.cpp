@@ -15,17 +15,11 @@ void ofApp::changeSeekbar(int &_frame)
 void ofApp::setup(){
 //    ofSetDataPathRoot("../Resources/data/");
     // yolo setting up
-    
-    detector.setup(ofToDataPath("MobileNetSSD_DG_deploy.prototxt"),
-               ofToDataPath("MobileNetSSD_DG_deploy.caffemodel"),
-               ofToDataPath("gocen.txt"));
-     /*
-    
-    detector.setup(ofToDataPath("yolov2-tiny-isee.cfg"),
-               ofToDataPath("yolov2-tiny-isee.weights"),
-               ofToDataPath("isee.list")
+    detector.setup(ofToDataPath("yolov2-tiny.cfg"),
+               ofToDataPath("yolov2-tiny.weights"),
+               ofToDataPath("coco.txt")
                );
-     */
+
         
     detector.setConfidenceThreshold(0.4);
     mode_annotation = MODE_IMAGE_ANNOTATION;

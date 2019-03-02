@@ -4,11 +4,20 @@
 void ofApp::setup(){
     img.load(ofToDataPath("dog.jpg"));
     // yolo
+    detector.setNetworkImageSize(416, 416);
     detector.setup(ofToDataPath("yolov2-tiny.cfg"),
                ofToDataPath("yolov2-tiny.weights"),
-               ofToDataPath("coco.list"));
-    detector.setConfidenceThreshold(0.4);
+               ofToDataPath("coco.txt"));
     
+    // SSD
+    /*
+    detector.setNetworkImageSize(300, 300);
+    detector.setup(ofToDataPath("MobileNetSSD_DG_deploy.prototxt"),
+                   ofToDataPath("MobileNetSSD_DG_deploy.caffemodel"),
+                   ofToDataPath("voc.list"));
+    detector.setConfidenceThreshold(0.1);
+   */
+    detector.setConfidenceThreshold(0.1);
     detector.update(img.getPixels());
 }
 
