@@ -22,5 +22,10 @@ ADDON_TAGS = "computer vision" "opencv" "image processing"  "darknet" "yolov2" "
 ADDON_URL = https://github.com/TetsuakiBaba
 
 common:
-ADDON_INCLUDES  = libs/opencv2.framework
-ADDON_FRAMEWORKS += OpenCL
+ADDON_INCLUDES  = /usr/local/Cellar/opencv@3/3.4.5/include/
+ADDON_LIBS = /usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_core.dylib
+ADDON_LIBS += /usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_imgproc.dylib
+ADDON_LIBS += /usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_dnn.dylib
+ADDON_LIBS += /usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_dnn_objdetect.dylib
+ADDON_LIBS += /usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_highgui.dylib
+ADDON_LIBS += /usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_imgcodecs.dylib

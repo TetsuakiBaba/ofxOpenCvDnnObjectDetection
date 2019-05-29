@@ -9,6 +9,79 @@
 		<string>46</string>
 		<key>objects</key>
 		<dict>
+			<key>1CBF631251FC1164A66325DE</key>
+			<dict>
+				<key>children</key>
+				<array>
+					<string>35D32716F14E3E18BA93703F</string>
+				</array>
+				<key>isa</key>
+				<string>PBXGroup</string>
+				<key>name</key>
+				<string>frameworks</string>
+				<key>sourceTree</key>
+				<string>&lt;group&gt;</string>
+			</dict>
+			<key>B3ACFAB69F9C4AC9F6E8577E</key>
+			<dict>
+				<key>fileRef</key>
+				<string>35D32716F14E3E18BA93703F</string>
+				<key>isa</key>
+				<string>PBXBuildFile</string>
+			</dict>
+			<key>35D32716F14E3E18BA93703F</key>
+			<dict>
+				<key>lastKnownFileType</key>
+				<string>wrapper.framework</string>
+				<key>isa</key>
+				<string>PBXFileReference</string>
+				<key>name</key>
+				<string>OpenCL.framework</string>
+				<key>path</key>
+				<string>/System/Library/Frameworks/OpenCL.framework</string>
+				<key>sourceTree</key>
+				<string>&lt;group&gt;</string>
+			</dict>
+			<key>15BDD62758509DD8C7D9AF14</key>
+			<dict>
+				<key>children</key>
+				<array>
+					<string>EE8796373B3A7A206522763C</string>
+				</array>
+				<key>isa</key>
+				<string>PBXGroup</string>
+				<key>name</key>
+				<string>libs</string>
+				<key>sourceTree</key>
+				<string>&lt;group&gt;</string>
+			</dict>
+			<key>69B7A65B02F73113368B434E</key>
+			<dict>
+				<key>fileRef</key>
+				<string>EE8796373B3A7A206522763C</string>
+				<key>isa</key>
+				<string>PBXBuildFile</string>
+			</dict>
+			<key>BD6A91D914902DEA0CEC1582</key>
+			<dict>
+				<key>fileRef</key>
+				<string>EE8796373B3A7A206522763C</string>
+				<key>isa</key>
+				<string>PBXBuildFile</string>
+			</dict>
+			<key>EE8796373B3A7A206522763C</key>
+			<dict>
+				<key>lastKnownFileType</key>
+				<string>wrapper.framework</string>
+				<key>isa</key>
+				<string>PBXFileReference</string>
+				<key>name</key>
+				<string>opencv2.framework</string>
+				<key>path</key>
+				<string>../../../../addons/ofxOpenCvDnnObjectDetection/libs/opencv2.framework</string>
+				<key>sourceTree</key>
+				<string>&lt;group&gt;</string>
+			</dict>
 			<key>EC3045EBB917C09A09BE954A</key>
 			<dict>
 				<key>explicitFileType</key>
@@ -43,6 +116,8 @@
 				<key>children</key>
 				<array>
 					<string>26D07B484A654576244BC387</string>
+					<string>15BDD62758509DD8C7D9AF14</string>
+					<string>1CBF631251FC1164A66325DE</string>
 				</array>
 				<key>isa</key>
 				<string>PBXGroup</string>
@@ -239,7 +314,7 @@ fi
 						<string>$(OF_CORE_HEADERS)</string>
 						<string>src</string>
 						<string>src</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/include/</string>
+						<string>../../../../addons/ofxOpenCvDnnObjectDetection/libs/opencv2.framework</string>
 					</array>
 					<key>MACOSX_DEPLOYMENT_TARGET</key>
 					<string>10.9</string>
@@ -269,6 +344,8 @@ fi
 					<key>FRAMEWORK_SEARCH_PATHS</key>
 					<array>
 						<string>$(inherited)</string>
+						<string>../../../../addons/ofxOpenCvDnnObjectDetection/libs</string>
+						<string>/System/Library/Frameworks</string>
 					</array>
 					<key>GCC_GENERATE_DEBUGGING_SYMBOLS</key>
 					<string>YES</string>
@@ -281,7 +358,7 @@ fi
 						<string>$(OF_CORE_HEADERS)</string>
 						<string>src</string>
 						<string>src</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/include/</string>
+						<string>../../../../addons/ofxOpenCvDnnObjectDetection/libs/opencv2.framework</string>
 					</array>
 					<key>ICON</key>
 					<string>$(ICON_NAME_RELEASE)</string>
@@ -300,12 +377,6 @@ fi
 						<string>$(OF_CORE_LIBS)</string>
 						<string>$(OF_CORE_FRAMEWORKS)</string>
 						<string>$(LIB_OF)</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_core.dylib</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_imgproc.dylib</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_dnn.dylib</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_dnn_objdetect.dylib</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_highgui.dylib</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_imgcodecs.dylib</string>
 					</array>
 					<key>PRODUCT_NAME</key>
 					<string>$(TARGET_NAME)</string>
@@ -3090,7 +3161,7 @@ fi
 						<string>$(OF_CORE_HEADERS)</string>
 						<string>src</string>
 						<string>src</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/include/</string>
+						<string>../../../../addons/ofxOpenCvDnnObjectDetection/libs/opencv2.framework</string>
 					</array>
 					<key>MACOSX_DEPLOYMENT_TARGET</key>
 					<string>10.9</string>
@@ -3152,7 +3223,7 @@ fi
 						<string>$(OF_CORE_HEADERS)</string>
 						<string>src</string>
 						<string>src</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/include/</string>
+						<string>../../../../addons/ofxOpenCvDnnObjectDetection/libs/opencv2.framework</string>
 					</array>
 					<key>MACOSX_DEPLOYMENT_TARGET</key>
 					<string>10.9</string>
@@ -3191,6 +3262,8 @@ fi
 				<key>files</key>
 				<array>
 					<string>E4328149138ABC9F0047C5CB</string>
+					<string>BD6A91D914902DEA0CEC1582</string>
+					<string>B3ACFAB69F9C4AC9F6E8577E</string>
 				</array>
 				<key>isa</key>
 				<string>PBXFrameworksBuildPhase</string>
@@ -3266,6 +3339,8 @@ fi
 					<key>FRAMEWORK_SEARCH_PATHS</key>
 					<array>
 						<string>$(inherited)</string>
+						<string>../../../../addons/ofxOpenCvDnnObjectDetection/libs</string>
+						<string>/System/Library/Frameworks</string>
 					</array>
 					<key>GCC_DYNAMIC_NO_PIC</key>
 					<string>NO</string>
@@ -3278,7 +3353,7 @@ fi
 						<string>$(OF_CORE_HEADERS)</string>
 						<string>src</string>
 						<string>src</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/include/</string>
+						<string>../../../../addons/ofxOpenCvDnnObjectDetection/libs/opencv2.framework</string>
 					</array>
 					<key>ICON</key>
 					<string>$(ICON_NAME_DEBUG)</string>
@@ -3297,12 +3372,6 @@ fi
 						<string>$(OF_CORE_LIBS)</string>
 						<string>$(OF_CORE_FRAMEWORKS)</string>
 						<string>$(LIB_OF_DEBUG)</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_core.dylib</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_imgproc.dylib</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_dnn.dylib</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_dnn_objdetect.dylib</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_highgui.dylib</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_imgcodecs.dylib</string>
 					</array>
 					<key>PRODUCT_NAME</key>
 					<string>$(TARGET_NAME)Debug</string>
@@ -3327,6 +3396,8 @@ fi
 					<key>FRAMEWORK_SEARCH_PATHS</key>
 					<array>
 						<string>$(inherited)</string>
+						<string>../../../../addons/ofxOpenCvDnnObjectDetection/libs</string>
+						<string>/System/Library/Frameworks</string>
 					</array>
 					<key>GCC_GENERATE_DEBUGGING_SYMBOLS</key>
 					<string>YES</string>
@@ -3337,7 +3408,7 @@ fi
 						<string>$(OF_CORE_HEADERS)</string>
 						<string>src</string>
 						<string>src</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/include/</string>
+						<string>../../../../addons/ofxOpenCvDnnObjectDetection/libs/opencv2.framework</string>
 					</array>
 					<key>ICON</key>
 					<string>$(ICON_NAME_RELEASE)</string>
@@ -3356,12 +3427,6 @@ fi
 						<string>$(OF_CORE_LIBS)</string>
 						<string>$(OF_CORE_FRAMEWORKS)</string>
 						<string>$(LIB_OF)</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_core.dylib</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_imgproc.dylib</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_dnn.dylib</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_dnn_objdetect.dylib</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_highgui.dylib</string>
-						<string>/usr/local/Cellar/opencv@3/3.4.5/lib/libopencv_imgcodecs.dylib</string>
 					</array>
 					<key>PRODUCT_NAME</key>
 					<string>$(TARGET_NAME)</string>
@@ -3498,7 +3563,9 @@ echo "$GCC_PREPROCESSOR_DEFINITIONS";
 				<key>dstSubfolderSpec</key>
 				<string>10</string>
 				<key>files</key>
-				<array />
+				<array>
+					<string>69B7A65B02F73113368B434E</string>
+				</array>
 				<key>isa</key>
 				<string>PBXCopyFilesBuildPhase</string>
 				<key>runOnlyForDeploymentPostprocessing</key>

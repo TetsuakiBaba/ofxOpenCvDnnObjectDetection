@@ -35,6 +35,10 @@ bool doesIncludeExtensions(string _filename, vector<string>_extensions)
 }
 
 
+Object::Object()
+{
+    
+}
 Object::Object(int _class_id, string _name, float _p, float _x, float _y, float _w, float _h)
 {
     class_id = _class_id;

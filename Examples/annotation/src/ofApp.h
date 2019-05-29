@@ -7,6 +7,7 @@
 #define MODE_IMAGE_ANNOTATION 1
 #define MODE_CAMERA_ANNOTATION 2
 #define MODE_VIDEO_ANNOTATION 3
+#define MODE_AUDIO_ANNOTATION 4
 
 
 class ofApp : public ofBaseApp{
@@ -46,5 +47,8 @@ public:
     ofParameter<int>fps;
     ofParameter<float>threshold;
     
+    
     void changeSeekbar(int &_frame);
+    
+
 };

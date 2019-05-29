@@ -22,23 +22,20 @@ Realtime Detection example for webcam video.
 Simple annotation example to export a yolo format.
 
 ## Install
-### 1. Install OpenCV version.3 by brew.
+### 1. Clone ofxOpenCvDnnObjectDetection to your of/addon directory
+    $ git clone https://github.com/TetsuakiBaba/ofxOpenCvDnnObjectDetection.git
+### 2. Download OpenCV.framework to ofxOpenCvDnnObjectDetection/libs directory. 
+    $ curl -O http://tetsuakibaba.jp/tmp/opencv2.framework.zip
+    $ unzip opencv2.framework.zip
+   
+Or you may build your own opencv.framework from opencv source. ( http://tetsuakibaba.jp/ws/doku.php?id=opencv_dnn:opencv2.framework )
 
-    $ brew install opencv@3
-
-### 2. confirm your opencv version
-Based on OpenCV@3(version.3) version, Please re-write ofxOpenCvDnnObjectDetection/addon_config.mk file. End of the file, there are some description about opencv path for your system. Please re-write the version according to your OpenCV@3 version. Current (2019/3/1) is 3.4.5, If you find other version on your directory tree, /usr/local/Cellar/opencv@3 , please do not forget fill in the correct version on the addon_config.mk file. You can get your current opencv version by typing below command.
-
-    $ ls /usr/local/Cellar/opencv@3
-
-### 3. Download cfg and weights file
-I put a download shell script on the ofxOpenCvDnnObjectDetection directory. it will download Yolov2 file(cfg and weights) to each examples directories. You can find download ofxYolov2 weights and cfg files on each example directories.
-
-    $ cd ofxOpenCvDnnObjectDetection
+## Getting Started with Examples/single_image.
+### 1. Download models
     $ sh getWeights.sh
-
-### 4. Update each examples by project generator, then run.
- Example/camera, single_image or annotation by project generator and add only ofxOpenDvDnnObjectDetection as an addon. Then update it. _Attention Please do not include OpenCV addon in OF.  
+### 2. Update single_image with the projectGenerator.
+![single_image screenshot](/projectGenerator.png)
+### 3. Run
 
 ## Compatibility
 - only macOS ( tested on Mojave)

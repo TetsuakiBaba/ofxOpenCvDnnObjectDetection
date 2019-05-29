@@ -34,6 +34,7 @@ public:
 
 class Object{
 public:
+    Object();
     Object(int _class_id, string _name, float _p, float _x, float _y, float _w, float _h);
     ~Object();
     ofRectangle r;

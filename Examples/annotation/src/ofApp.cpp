@@ -15,6 +15,7 @@ void ofApp::changeSeekbar(int &_frame)
 void ofApp::setup(){
 //    ofSetDataPathRoot("../Resources/data/");
     // yolo setting up
+    ofSetFrameRate(60);
     detector.setup(ofToDataPath("yolov2-tiny.cfg"),
                ofToDataPath("yolov2-tiny.weights"),
                ofToDataPath("coco.txt")
@@ -41,6 +42,7 @@ void ofApp::setup(){
     gui_basic.setName("Settings");
     gui_basic.add(fps.set("FPS", 30, 0, 60));
     gui_basic.add(threshold.set("Threshold", 0.4, 0.01, 1.0));
+    
 }
 
 //--------------------------------------------------------------
@@ -244,7 +246,7 @@ void ofApp::mouseMoved(int x, int y ){
 
 //--------------------------------------------------------------
 void ofApp::mouseDragged(int x, int y, int button){
-    ofRectangle r_img;
+     ofRectangle r_img;
     float w,h;
     switch( mode_annotation )
     {
@@ -331,6 +333,11 @@ void ofApp::mouseReleased(int x, int y, int button){
         }
     }
     
+    if( mode_annotation == MODE_AUDIO_ANNOTATION){
+        
+    }
+    
+    
     ofRectangle r_img;
     r_img.set(0,0, detector.image_annotation.getWidth(), detector.image_annotation.getHeight());
     if( r.getArea() > 10 &&  r_img.inside(x,y) ){
@@ -398,6 +405,15 @@ void ofApp::dragEvent(ofDragInfo dragInfo){
         gui_video.setWidthElements(video.getWidth());
         flg_pause_video = false;
         video.play();
+    }
+    else if( doesIncludeExtensions(dragInfo.files[0], {".wav", "WAV"})){
+        ofFileDialogResult file = ofSystemSaveDialog("myAnnotation_", "Choose a saving directory");
+        if( !file.bSuccess )return;
+        path = file.getPath();
+        detector.filename = file.getPath()+ofGetTimestampString();
+        detector.filename_jpg = detector.filename + ".jpg";
+        detector.filename_txt = detector.filename + ".txt";
+        mode_annotation = MODE_AUDIO_ANNOTATION;
     }
     else{
         ofSystemAlertDialog("Error: Filetype is not allowed.");
