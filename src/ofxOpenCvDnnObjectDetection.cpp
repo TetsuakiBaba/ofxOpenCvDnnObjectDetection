@@ -58,6 +58,15 @@ ofxOpenCvDnnObjectDetection::ofxOpenCvDnnObjectDetection()
     
 }
 
+ofRectangle Object::getScaledBB(float _x, float _y, float _w, float _h)
+{
+    ofRectangle r_return;
+    r_return.set((r.x)*_w+_x,
+                 (r.y)*_h+_y,
+                 r.width * _w,
+                 r.height * _h);
+    return r_return;
+}
 ofRectangle Object::getScaledBB(float _w, float _h)
 {
     ofRectangle r_return;
@@ -90,7 +99,7 @@ void ofxOpenCvDnnObjectDetection::draw(float _x, float _y, float _w, float _h)
         ofNoFill();
         ofSetLineWidth(3);
         ofSetColor(detection_color.at(object[i].class_id));
-        ofRectangle r_scaled = object.at(i).getScaledBB(_w, _h);
+        ofRectangle r_scaled = object.at(i).getScaledBB(_x, _y, _w, _h);
         ofDrawRectangle(r_scaled);
         
         ofFill();

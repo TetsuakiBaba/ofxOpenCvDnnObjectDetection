@@ -30,6 +30,7 @@ public:
     string name;
     ofRectangle r;
     ofRectangle getScaledBB(float _w, float _h);
+    
 };
 
 class Object{
@@ -39,6 +40,7 @@ public:
     ~Object();
     ofRectangle r;
     ofRectangle getScaledBB(float _w, float _h);
+    ofRectangle getScaledBB(float _x, float _y, float _w, float _h);
     string name;
     float p;
     int class_id;
