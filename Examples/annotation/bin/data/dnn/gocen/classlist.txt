@@ -1,0 +1,15 @@
+note_head
+natural
+flat
+sharp
+white_head
+staff
+p
+m
+f
+clef_g
+clef_c
+clef_f
+bar
+d_sharp
+d_flat

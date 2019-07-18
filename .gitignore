@@ -30,3 +30,10 @@
 *.exe
 *.out
 *.app
+
+# model file
+*.weights
+
+# frameworks
+*.framework
+*.zip

@@ -22,5 +22,19 @@ ADDON_TAGS = "computer vision" "opencv" "image processing"  "darknet" "yolov2" "
 ADDON_URL = https://github.com/TetsuakiBaba
 
 common:
-ADDON_INCLUDES  = libs/opencv2.framework
+ADDON_INCLUDES  += libs/opencv2.framework
 ADDON_FRAMEWORKS += OpenCL
+
+#ADDON_INCLUDES += /opt/intel/openvino/opencv/include
+#ADDON_LDFLAGS += /opt/intel/openvino/opencv/lib/libopencv_core.4.1.0.dylib
+#ADDON_LDFLAGS += /opt/intel/openvino/opencv/lib/libopencv_imgproc.4.1.0.dylib
+#ADDON_LDFLAGS += /opt/intel/openvino/opencv/lib/libopencv_dnn.4.1.0.dylib
+#ADDON_LDFLAGS += /opt/intel/openvino/opencv/lib/libopencv_highgui.4.1.0.dylib
+#ADDON_LDFLAGS += /opt/intel/openvino/opencv/lib/libopencv_imgcodecs.4.1.0.dylib
+#ADDON_LDFLAGS += /opt/intel/openvino/inference_engine/lib/intel64/libinference_engine.dylib
+#ADDON_LDFLAGS += /opt/intel/openvino/inference_engine/lib/intel64/libcpu_extension.dylib
+#ADDON_LDFLAGS += /opt/intel/openvino/inference_engine/lib/intel64/libMKLDNNPlugin.dylib
+#ADDON_LDFLAGS += /opt/intel/openvino/inference_engine/lib/intel64/libMKLDNNPlugind.dylib
+#ADDON_LDFLAGS += /opt/intel/openvino/inference_engine/lib/intel64/libcpu_extensiond.dylib
+#ADDON_LDFLAGS += /opt/intel/openvino/inference_engine/lib/intel64/libinference_engined.dylib
+#ADDON_FRAMEWORKS += OpenCL

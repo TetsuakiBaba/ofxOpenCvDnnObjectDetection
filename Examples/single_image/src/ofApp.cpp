@@ -3,11 +3,12 @@
 //--------------------------------------------------------------
 void ofApp::setup(){
     img.load(ofToDataPath("dog.jpg"));
+    ofSetWindowShape(img.getWidth(), img.getHeight());
     // yolo
     detector.setNetworkImageSize(416, 416);
-    detector.setup(ofToDataPath("yolov2-tiny.cfg"),
-               ofToDataPath("yolov2-tiny.weights"),
-               ofToDataPath("coco.txt"));
+    detector.setup(ofToDataPath("dnn/yolov2-tiny.cfg"),
+               ofToDataPath("dnn/yolov2-tiny.weights"),
+               ofToDataPath("dnn/coco.txt"));
     
     // SSD
     /*
@@ -17,7 +18,7 @@ void ofApp::setup(){
                    ofToDataPath("voc.list"));
     detector.setConfidenceThreshold(0.1);
    */
-    detector.setConfidenceThreshold(0.1);
+    detector.setConfidenceThreshold(0.4);
     detector.update(img.getPixels());
 }
 
@@ -33,9 +34,12 @@ void ofApp::draw(){
     img.draw(0,0);
     
     /*
-     yolo.object[i].r; -> rectangle bounding box
-     yolo.object[i].name; -> class name
-     yolo.object[i].p; -> probability
+     Here is a sample code to access each detected objects.
+     for( int i = 0; i < detector.object.size(); i++ ){
+     detector.object[i].r; -> rectangle bounding box, ofRectangle
+     detector.object[i].name; -> class name, string
+     detector.object[i].p; -> probability, float
+     }
      see yolo.draw() method for further object information
      */
     detector.draw(0,0,img.getWidth(), img.getHeight());

@@ -8,18 +8,18 @@ else
 	echo "wget is not installed. Falling back to curl"
 	curl -O "${path_to_weights}"
 fi
-cp ./yolov2-tiny.weights ./Examples/camera/bin/data/yolov2-tiny.weights
-cp ./yolov2-tiny.weights ./Examples/single_image/bin/data
-cp ./yolov2-tiny.weights ./Examples/annotation/bin/data
+cp ./yolov2-tiny.weights ./Examples/camera/bin/data/dnn/
+cp ./yolov2-tiny.weights ./Examples/single_image/bin/data/dnn/
+cp ./yolov2-tiny.weights ./Examples/annotation/bin/data/dnn/
 if wget ${path_to_cfg}; then
 	echo "downloading cfg"
 else
 	echo "wget is not installed. Falling back to curl"
 	curl -O "${path_to_cfg}"
 fi
-cp ./yolov2-tiny.cfg ./Examples/single_image/bin/data/
-cp ./yolov2-tiny.cfg ./Examples/camera/bin/data/
-cp ./yolov2-tiny.cfg ./Examples/annotation/bin/data/
+cp ./yolov2-tiny.cfg ./Examples/single_image/bin/data/dnn/
+cp ./yolov2-tiny.cfg ./Examples/camera/bin/data/dnn/
+cp ./yolov2-tiny.cfg ./Examples/annotation/bin/data/dnn/
 rm -f ./yolov2-tiny.cfg
 rm -f ./yolov2-tiny.weights
 echo "done"

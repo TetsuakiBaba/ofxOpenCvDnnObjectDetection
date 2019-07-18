@@ -4,10 +4,7 @@
 #include "ofxOpenCvDnnObjectDetection.h"
 #include "ofxGui.h"
 
-#define MODE_IMAGE_ANNOTATION 1
-#define MODE_CAMERA_ANNOTATION 2
-#define MODE_VIDEO_ANNOTATION 3
-#define MODE_AUDIO_ANNOTATION 4
+
 
 
 class ofApp : public ofBaseApp{
@@ -34,21 +31,9 @@ public:
     bool flg_show_yolo_detection;
     bool flg_pause_camera;
     bool flg_pause_video;
-    bool is_first_camera_annotation;
-    string path;
-    int mode_annotation;
-    ofVideoGrabber camera;
-    ofVideoPlayer video;
-    
-    ofxPanel gui_video;
-    ofParameter<int>seekbar;
-    
-    ofxPanel gui_basic;
-    ofParameter<int>fps;
-    ofParameter<float>threshold;
-    
-    
-    void changeSeekbar(int &_frame);
-    
+    bool is_dragging;
+    bool is_shift_pressed;
 
+
+   
 };

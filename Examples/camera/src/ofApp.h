@@ -8,7 +8,8 @@ public:
     void setup();
     void update();
     void draw();
-    ofVideoGrabber video;
+    //ofVideoGrabber video;
+    ofVideoPlayer video;
     ofxOpenCvDnnObjectDetection detector;
     
     void keyPressed(int key);

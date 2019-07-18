@@ -34,6 +34,28 @@ bool doesIncludeExtensions(string _filename, vector<string>_extensions)
     return false;
 }
 
+std::vector<std::string> split(std::string str, char del) {
+    int first = 0;
+    int last = str.find_first_of(del);
+    
+    std::vector<std::string> result;
+    
+    while (first < str.size()) {
+        std::string subStr(str, first, last - first);
+        
+        result.push_back(subStr);
+        
+        first = last + 1;
+        last = str.find_first_of(del, first);
+        
+        if (last == std::string::npos) {
+            last = str.size();
+        }
+    }
+    
+    return result;
+}
+
 
 Object::Object()
 {
@@ -52,10 +74,162 @@ Object::~Object()
     
 }
 
-
+// Constructor
 ofxOpenCvDnnObjectDetection::ofxOpenCvDnnObjectDetection()
 {
+
+}
+ofxOpenCvDnnObjectDetection::~ofxOpenCvDnnObjectDetection()
+{
     
+}
+
+void ofxOpenCvDnnObjectDetection::enableAnnotationControl()
+{
+    ofAddListener(ofEvents().keyPressed ,this, &ofxOpenCvDnnObjectDetection::keyPressed);
+    ofAddListener(ofEvents().keyReleased ,this, &ofxOpenCvDnnObjectDetection::keyReleased);
+    ofAddListener(ofEvents().mousePressed, this, &ofxOpenCvDnnObjectDetection::mousePressed);
+    ofAddListener(ofEvents().mouseReleased, this, &ofxOpenCvDnnObjectDetection::mouseReleased);
+    ofAddListener(ofEvents().mouseEntered, this, &ofxOpenCvDnnObjectDetection::mouseEntered);
+    ofAddListener(ofEvents().mouseExited, this, &ofxOpenCvDnnObjectDetection::mouseExit);
+    ofAddListener(ofEvents().mouseMoved, this, &ofxOpenCvDnnObjectDetection::mouseMoved);
+    ofAddListener(ofEvents().mouseDragged, this, &ofxOpenCvDnnObjectDetection::mouseDragged);
+    ofAddListener(ofEvents().fileDragEvent, this, &ofxOpenCvDnnObjectDetection::dragEvent);
+}
+void ofxOpenCvDnnObjectDetection::disableAnnotationControl()
+{
+    ofRemoveListener(ofEvents().keyPressed, this,&ofxOpenCvDnnObjectDetection::keyPressed);
+    ofRemoveListener(ofEvents().keyReleased, this,&ofxOpenCvDnnObjectDetection::keyReleased);
+    ofRemoveListener(ofEvents().mousePressed, this, &ofxOpenCvDnnObjectDetection::mousePressed);
+    ofRemoveListener(ofEvents().mouseReleased, this, &ofxOpenCvDnnObjectDetection::mouseReleased);
+    ofRemoveListener(ofEvents().mouseEntered, this, &ofxOpenCvDnnObjectDetection::mouseEntered);
+    ofRemoveListener(ofEvents().mouseExited, this, &ofxOpenCvDnnObjectDetection::mouseExit);
+    ofRemoveListener(ofEvents().mouseMoved, this, &ofxOpenCvDnnObjectDetection::mouseMoved);
+    ofRemoveListener(ofEvents().mouseDragged, this, &ofxOpenCvDnnObjectDetection::mouseDragged);
+    ofRemoveListener(ofEvents().fileDragEvent, this, &ofxOpenCvDnnObjectDetection::dragEvent);
+}
+
+void ofxOpenCvDnnObjectDetection::keyPressed(ofKeyEventArgs &e)
+{
+    int key = e.key;
+    
+    if( key == OF_KEY_RIGHT || key == 'f' ){
+        switch( mode_annotation )
+        {
+            case MODE_DIR_IMAGE_ANNOTATION:
+                if( seekbar < dir_annotation.size()-1 )seekbar++;
+                break;
+            case MODE_VIDEO_ANNOTATION:
+                if(video.isLoaded())video.nextFrame();
+                train.clear();
+                setAnnotationFilename(path+ofGetTimestampString());
+                break;
+        }
+    }
+    else if( key == OF_KEY_LEFT || key == 'b'){
+        switch( mode_annotation )
+        {
+            case MODE_DIR_IMAGE_ANNOTATION:
+                if( seekbar > 0)seekbar--;
+                break;
+            case MODE_VIDEO_ANNOTATION:
+                if( video.isLoaded())video.previousFrame();
+                train.clear();
+                setAnnotationFilename(path+ofGetTimestampString());
+                break;
+        }
+    }
+    else if( key == OF_KEY_CONTROL){
+        flg_show_yolo_detection = true;
+        if( mode_annotation == MODE_VIDEO_ANNOTATION && flg_pause_video == true ){
+            video.update();
+            update(video.getPixels());
+        }
+    }
+    else if( key == 'X' ){
+        train.clear();
+        saveAnnotation();
+        if(mode_annotation == MODE_CAMERA_ANNOTATION ||
+           mode_annotation == MODE_VIDEO_ANNOTATION){
+            removeAnnotationFiles();
+        }
+    }
+    else if( key == 'c' ){
+        ofFileDialogResult file = ofSystemSaveDialog("myAnnotation_", "Choose a Saving Directory");
+        if( file.bSuccess ){
+            path = file.getPath();
+            setAnnotationFilename(path+ofGetTimestampString());
+        }
+        else{
+            return;
+        }
+        if( video.isLoaded() )video.close();
+        mode_annotation = MODE_CAMERA_ANNOTATION;
+        string devices;
+        for( int i = 0; i < camera.listDevices().size(); i++ ){
+            devices=devices+ofToString(camera.listDevices()[i].id) +
+            ": " +
+            camera.listDevices()[i].deviceName +
+            "\n";
+        }
+        string camera_id = ofSystemTextBoxDialog("Choose Camera ID to Open\n"+devices, ofToString(camera.listDevices().size()-1));
+        camera.setDeviceID(ofToInt(camera_id));
+        camera.initGrabber(640,480);
+        image_annotation.setFromPixels(camera.getPixels());
+        adjustGuiComponents();
+        flg_pause_camera = false;
+        train.clear();
+    }
+    else if( key == ' ' ){
+        if( mode_annotation == MODE_VIDEO_ANNOTATION){
+            if( flg_pause_video )flg_pause_video=false;
+            else flg_pause_video = true;
+            if( flg_pause_video == true ){
+                video.setPaused(true);
+            }
+            else{
+                video.setPaused(false);
+            }
+            train.clear();
+            setAnnotationFilename(path+ofGetTimestampString());
+        }
+        else if( mode_annotation == MODE_CAMERA_ANNOTATION ){
+            flg_pause_camera = !flg_pause_camera;
+            train.clear();
+            setAnnotationFilename(path+ofGetTimestampString());
+        }
+    }
+    else if( key == 'd' ){
+        darkmode = !darkmode;
+    }
+    else if( key == 'o' ){
+        ofSystem("open "+ofToDataPath("dnn/"));
+    }
+    else if( key == OF_KEY_SHIFT ){
+        is_shift_pressed = true;
+        b_magnify = true;
+    }
+    else if( key == OF_KEY_SUPER ){
+        b_magnify_pointing = true;
+    }
+    else if( key == 'r' ){
+        b_ai_checker = true;
+    }
+}
+
+void ofxOpenCvDnnObjectDetection::keyReleased(ofKeyEventArgs &e)
+{
+    int key = e.key;
+    if( key == OF_KEY_CONTROL){
+        flg_show_yolo_detection = false;
+    }
+    else if( key == OF_KEY_SHIFT ){
+        is_shift_pressed = false;
+        b_magnify = false;
+    }
+    if( key == OF_KEY_SUPER ){
+        b_magnify_pointing = false;
+    }
 }
 
 ofRectangle Object::getScaledBB(float _x, float _y, float _w, float _h)
@@ -88,10 +262,7 @@ ofRectangle TrainObject::getScaledBB(float _w, float _h)
 }
 
 
-ofxOpenCvDnnObjectDetection::~ofxOpenCvDnnObjectDetection()
-{
-    
-}
+
 
 void ofxOpenCvDnnObjectDetection::draw(float _x, float _y, float _w, float _h)
 {
@@ -143,6 +314,9 @@ void ofxOpenCvDnnObjectDetection::drawAnnotation(float _x, float _y, float _w, f
 
 }
 
+
+
+
 cv::Mat ofxOpenCvDnnObjectDetection::toCV(ofPixels &pix)
 {
 
@@ -151,6 +325,7 @@ cv::Mat ofxOpenCvDnnObjectDetection::toCV(ofPixels &pix)
 
 void ofxOpenCvDnnObjectDetection::postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net)
 {
+
     static std::vector<int> outLayers = net.getUnconnectedOutLayers();
     static std::string outLayerType = net.getLayer(outLayers[0])->type;
     
@@ -255,8 +430,233 @@ void ofxOpenCvDnnObjectDetection::postprocess(Mat& frame, const std::vector<Mat>
     }
 }
 
+void ofxOpenCvDnnObjectDetection::drawAnnotationControls()
+{
+    mouseX = ofGetMouseX();
+    mouseY = ofGetMouseY();
+    if( darkmode ){
+        ofBackground(150);
+    }
+    else{
+        ofBackground(60);
+    }
+    ofSetColor(255);
+    
+    // Show YOLO Class Selector
+    drawClassSelector(image_annotation.getWidth()+20,20, 3);
+    
+    
+    
+    // Show YOLO Realtime detection result
+    if( flg_show_yolo_detection ){
+        ofSetColor(255);
+        image_annotation.draw(0,0);
+        draw(0,0,
+             image_annotation.getWidth(),
+             image_annotation.getHeight());
+    }
+    else{
+        // Show only annotation and image
+        drawAnnotation(0,0,
+                       image_annotation.getWidth(),
+                       image_annotation.getHeight());
+        
+    }
+    
+    // Show bounding box selecting operation
+    ofNoFill();
+    ofSetLineWidth(2.0);
+    ofDrawRectangle(r);
+    
+    drawReconfirmAnnotation();
+    ofSetColor(ofColor::ghostWhite);
+    font_debug.drawString(str_debug,
+                          20+image_annotation.getWidth(),
+                          60+gui_basic.getHeight()+r_class_selector.getHeight());
+    
+    switch( mode_annotation )
+    {
+        case MODE_DIR_IMAGE_ANNOTATION:
+            gui_frame.setPosition(0, image_annotation.getHeight());
+            gui_frame.setWidthElements(image_annotation.getWidth());
+            gui_frame.setDefaultWidth(image_annotation.getWidth());
+            gui_frame.setSize(image_annotation.getWidth(), 20);
+            gui_frame.draw();
+            ofSetColor(ofColor::black);
+            ofDrawRectangle(0, image_annotation.getHeight(),
+                            image_annotation.getWidth(), 18);
+            ofSetColor(ofColor::white);
+            font_message.drawString(filename_jpg,
+                                    0,
+                                    image_annotation.getHeight()+14);
+            break;
+        case MODE_IMAGE_ANNOTATION:
+            font_message.drawString(filename_jpg,
+                                    0,
+                                    image_annotation.getHeight()+14);
+            break;
+        case MODE_CAMERA_ANNOTATION:
+            font_message.drawString(filename_jpg,
+                                    0,
+                                    image_annotation.getHeight()+14);
+            break;
+        case MODE_VIDEO_ANNOTATION:
+            gui_frame.draw();
+            font_message.drawString(filename_jpg,
+                                    0,
+                                    image_annotation.getHeight()+14);
+            
+            break;
+    }
+    
+    
+    
+    gui_basic.draw();
+    
+    // show cross
+    ofSetLineWidth(1.0);
+    if( darkmode ){
+        ofSetColor(255,0,0,100);
+    }
+    else{
+        ofSetColor(255,255,255,100);
+    }
+    ofDrawLine(ofGetMouseX(), 0, ofGetMouseX(), ofGetHeight());
+    ofDrawLine(0, ofGetMouseY(), ofGetWidth(), ofGetMouseY());
+    
+    // Magnify a mouse hoverd annotation
+    if( b_magnify == true ){
+        bool is_showing_magnify = false;
+        for( int i = 0; i < train.size(); i++ ){
+            ofRectangle r_hover = train.at(i).getScaledBB(image_annotation.getWidth(),
+                                                          image_annotation.getHeight());
+            if( r_hover.inside(ofGetMouseX(), ofGetMouseY())){
+                ofImage img = image_annotation;
+                img.crop(r_hover.x,r_hover.y, r_hover.width, r_hover.height);
+                ofSetColor(255);
+                ofFill();
+                if( ofGetMouseY() > image_annotation.getHeight()/2 ){
+                    ofDrawRectangle(ofGetMouseX()-5+10, ofGetMouseY()-5-r_hover.height*magnify,
+                                    r_hover.width*magnify+10, r_hover.height*magnify+10);
+                    img.draw(ofGetMouseX()+10,ofGetMouseY()-r_hover.height*magnify,
+                             r_hover.width*magnify, r_hover.height*magnify);
+                }
+                else{
+                    ofDrawRectangle(ofGetMouseX()-5+10, ofGetMouseY()-5,
+                                    r_hover.width*magnify+10, r_hover.height*magnify+10);
+                    img.draw(ofGetMouseX()+10, ofGetMouseY(),
+                             r_hover.width*magnify, r_hover.height*magnify);
+                }
+                ofNoFill();
+                is_showing_magnify = true;
+            }
+            
+        }
+    }
+    if( b_magnify_pointing ){
+        ofRectangle r;
+        r.set(0,0,
+              image_annotation.getWidth(),
+              image_annotation.getHeight());
+        if( r.inside(ofGetMouseX(), ofGetMouseY()) ){
+            ofImage img = image_annotation;
+            float size = 200.0;
+            float scale = 3.5*magnify;
+            float crop_size = size/scale;
+            ofSetColor(255);
+            ofFill();
+            img.crop(mouseX-crop_size/2, mouseY-crop_size/2, crop_size, crop_size);
+            ofDrawRectangle(mouseX-size/2-5,mouseY-size/2-5, size+10, size+10);
+            img.draw(mouseX-size/2,mouseY-size/2, size, size);
+            ofSetColor(color_crossbar);
+            ofDrawLine(ofGetMouseX(), 0, ofGetMouseX(), ofGetHeight());
+            ofDrawLine(0, ofGetMouseY(), ofGetWidth(), ofGetMouseY());
+            ofHideCursor();
+        }
+    }
+    else{
+        ofShowCursor();
+    }
+    
+    
+    if( mode_annotation == MODE_SELECT_ANNOTATION ){
+        static unsigned long timestamp = 0;
+        ofFill();
+        ofSetColor(0,0,0,200);
+        ofDrawRectangle(0,0,ofGetWidth(), ofGetHeight());
+        ofNoFill();
+        ofSetColor(255);
+        String str = "Drag and drop your file to start ";
+        if( ofGetSeconds() %2 == 0)str += ">";
+        
+        str+="\n\n";
+        str += "[README]\n\nSingle image annotation: Drag and Drop an image.\n - .jpg is only allowd.\nImage directory annotation: Drag and Drop a directory.\n - needs to include .jpg and .txt(yolo) file.\nCamera annotation: press 'c' key.\nVideo file annotation: Drag and Drop a video file.\n - .mov and .mp4 are allowd.\n\nIf you wanna replace yolov2 files, press 'o' to open a data directory, \nthen restart this app.\n\nAuthor:Tetsuaki Baba, https://tetsuakibaba.jp, 2019\nLisence:MIT License";
+        ofRectangle r = font_message.getStringBoundingBox(str,0,0);
+        font_message.drawString(str, ofGetWidth()/2-r.getWidth()/2, ofGetHeight()/2-r.getHeight()/2);
+    }
+}
+void ofxOpenCvDnnObjectDetection::updateControls()
+{
+    fps = ofGetFrameRate();
+  
+    setNetworkImageSize(network_image_size, network_image_size);
+    gui_basic.setPosition(getClassSelectorBoundingBox().getX(),
+                          getClassSelectorBoundingBox().getHeight()+
+                          getClassSelectorBoundingBox().getY()+20);
+    gui_basic.setSize(r_class_selector.getWidth(),18);
+    gui_basic.setWidthElements(r_class_selector.getWidth());
+    gui_basic.setDefaultWidth(r_class_selector.getWidth());
+    
+    
+    switch( mode_annotation )
+    {
+        case MODE_CAMERA_ANNOTATION:
+            if( train.size() >  0 )flg_pause_camera = true;
+            
+            if( flg_pause_camera == false ){
+                camera.update();
+                if( camera.isFrameNew() ){
+                    image_annotation.setFromPixels(camera.getPixels());
+                    if( flg_show_yolo_detection)update(camera.getPixels());
+                }
+            }
+            break;
+            
+        case MODE_VIDEO_ANNOTATION:
+            
+            video.update();
+            if( video.isFrameNew() ){
+                image_annotation.setFromPixels(video.getPixels());
+                if( flg_show_yolo_detection){
+                    update(video.getPixels());
+                }
+                
+                seekbar.removeListener(this, &ofxOpenCvDnnObjectDetection::changeSeekbar);
+                seekbar = video.getCurrentFrame();
+                seekbar.addListener(this, &ofxOpenCvDnnObjectDetection::changeSeekbar);
+                
+            }
+            break;
+    }
+    
+    // dnn detection checker, it runs one by one step for image check.
+    if( b_ai_checker && mode_annotation == MODE_DIR_IMAGE_ANNOTATION){
+        if( !checkAnnotationImage(threshold_precision) ){
+            b_ai_checker = false;
+        }
+        else{
+            if( seekbar < seekbar.getMax() )seekbar++;
+            if( seekbar == seekbar.getMax())b_ai_checker = false;
+        }
+    }
+    else if( b_ai_checker ){
+        ofSystemAlertDialog("Auto annotation checker runs on only IMAGE DIRECTORY ANNOTATION MODE. Please drag and drop your annotation directory on this window to run it.");
+        b_ai_checker = false;
+    }
+}
 void ofxOpenCvDnnObjectDetection::update(ofPixels &op)
 {
+//    setConfidenceThreshold(threshold);
     object.clear();
     
     cv::Mat frame = toCV(op);
@@ -268,7 +668,7 @@ void ofxOpenCvDnnObjectDetection::update(ofPixels &op)
     
     //! [Resizing without keeping aspect ratio]
     Mat resized;
-    resize(frame, resized, cvSize(network_width, network_height));
+    resize(frame, resized, cv::Size(network_width, network_height));
     
     //! [Prepare blob]
     Mat inputBlob = blobFromImage(resized, 1 / 255.F); //Convert Mat to batch of images
@@ -284,26 +684,85 @@ void ofxOpenCvDnnObjectDetection::update(ofPixels &op)
     postprocess(frame, outs, net);
 }
 
+void ofxOpenCvDnnObjectDetection::setupAnnotationGui()
+{
+  
+    gui_frame.setup();
+    gui_frame.setName("Seek Bar");
+    gui_frame.add(seekbar.set("frame", 0));
+    threshold.addListener(this, &ofxOpenCvDnnObjectDetection::changeThreshold);
+    seekbar.addListener(this, &ofxOpenCvDnnObjectDetection::changeSeekbar);
+    darkmode.addListener(this, &ofxOpenCvDnnObjectDetection::changeDarkMode);
+    button_forward.addListener(this, &ofxOpenCvDnnObjectDetection::forwardAnnotationButton);
+    button_back.addListener(this, &ofxOpenCvDnnObjectDetection::backAnnotationButton);
+    
+    gui_basic.setup();
+    gui_basic.setName("Settings");
+    gui_basic.loadFont(ofToDataPath("font/DIN Alternate Bold.ttf"), 10);
+    gui_basic.setPosition(20,20);
+    
+    gui_basic.setSize(r_class_selector.getWidth(),18);
+    gui_basic.setWidthElements(r_class_selector.getWidth());
+    gui_basic.setDefaultWidth(r_class_selector.getWidth());
+    gui_basic.add(fps.set("FPS", 30, 0, 60));
+    gui_basic.add(threshold.set("Threshold", 0.4, 0.01, 1.0));
+    gui_basic.add(network_image_size.set("Network Image", 416, 64,416));
+    gui_basic.add(darkmode.setup("Dark Mode[d]", false));
+    gui_basic.add(b_magnify.setup("Magnify Annotation [Shift]", false));
+    gui_basic.add(b_magnify_pointing.setup("Magnify Pointing [Cmd]",false));
+    gui_basic.add(magnify.set("Magnify Scale",1.0, 1.0, 4.0));
+    //    gui_basic.add(text_search_id.set("Search Class ID", "all"));
+    gui_basic.add(button_forward.setup("Forward Annotation Image [f]"));
+    gui_basic.add(button_back.setup("Back Annotation Image [b]"));
+    gui_basic.add(b_ai_checker.setup("Run Auto Annotation Checker", false));
+    gui_basic.add(threshold_precision.set("Precision Threshold", 0.8, 0.0, 1.0));
+    enableAnnotationControl();
+}
 void ofxOpenCvDnnObjectDetection::setup(string _path_to_cfg, string _path_to_weights, string _path_to_names)
 {
+    mode_annotation = MODE_SELECT_ANNOTATION;
+    flg_pause_camera = true;
+    
+    filepath = ofToDataPath("");
+    filename = "test";
+    filename_jpg = "test.jpg";
+    filename_txt = "test.txt";
+    
+    font_message.load(ofToDataPath("font/DIN Alternate Bold.ttf"), 12);
+    font_info.load(ofToDataPath("font/DIN Alternate Bold.ttf"), 12);
+    font_debug.load(ofToDataPath("font/DIN Alternate Bold.ttf"), 8);
+    
+    
 //    putenv("OPENCV_OPENCL_RUNTIME=");
 //    putenv("OPENCV_OPENCL_DEVICE=:DGPU:0");
-    //cv::ocl::setUseOpenCL( true );
+    str_debug+="[DEBUG]\n";
+//    ocl::setUseOpenCL( true );
     
     String modelConfiguration = _path_to_cfg;
     String modelBinary = _path_to_weights;
     
-    //! [Initialize network]
+    //! [Initialize
+
     net = readNet(modelConfiguration, modelBinary);
+//    net = readNetFromModelOptimizer(modelConfiguration, modelBinary);
+
+    str_debug+=ofSystem("system_profiler SPHardwareDataType");
+    str_debug+="classlist file: "+_path_to_names+"\n";
+    str_debug+="cfg file: "+_path_to_cfg+"\n";
+    str_debug+="weight file: "+_path_to_weights+"\n";
+    
     std::vector<String> lname = net.getLayerNames();
     for (int i = 0; i < lname.size();i++) {
         std::cout << i+1 << " " << lname[i] << std::endl;
     }
-    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+
+
+    //net.setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
+    // net.setPreferableBackend(DNN_BACKEND_DEFAULT);
     //    net.setPreferableBackend(DNN_BACKEND_HALIDE);
     //      net.setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
-    net.setPreferableTarget(DNN_TARGET_CPU);
-    //        net.setPreferableTarget(DNN_TARGET_OPENCL);
+    //net.setPreferableTarget(DNN_TARGET_CPU);
+    //            net.setPreferableTarget(DNN_TARGET_OPENCL);
     //    net.setPreferableTarget(DNN_TARGET_OPENCL_FP16);
     
 
@@ -333,46 +792,35 @@ void ofxOpenCvDnnObjectDetection::setup(string _path_to_cfg, string _path_to_wei
     }
     
     // set default Detection Color
-    for( int i = 0; i < classNamesVec.size(); i++ ){
-        detection_color.push_back(ofColor(100*((i+1)%2)+100,
-                                          50*((i+2)%3)+100,
-                                          25*((i+3)%4)+100,
-                                          255));
-    }
+    setAnnotationColorMode(ANNOTATION_COLOR_MODE_DEFAULT);
     
-    // for gocen detection color
-    /*
-    {
-        ofColor c[] =
-        {
-            ofColor(255, 255, 255),
-            ofColor(111, 12, 188),
-            ofColor(25, 71, 175),
-            ofColor(188, 12, 180),
-            ofColor(200, 255, 255),
-            ofColor(255, 230, 51),
-            ofColor(34, 181, 115),
-            ofColor(98, 160, 0),
-            ofColor(64, 109, 5),
-            ofColor(255, 137, 57),
-            ofColor(255, 85, 85),
-            ofColor(255, 102, 186),
-            ofColor(140, 98, 57),
-            ofColor(238, 118, 255),
-            ofColor(117, 158, 255)
-        };
-        
-        for( int i = 0; i < classNamesVec.size(); i++){
-            detection_color.push_back(c[i]);
-        }
-    }
-     */
-    
-    font_info.load(ofToDataPath("DIN Alternate Bold.ttf"),12);
     confidenceThreshold = 0.4;
-    class_id_selected = 0; // default 
+    class_id_selected = 0; // default
+    
+    
 }
 
+void ofxOpenCvDnnObjectDetection::setAnnotationColorMode(int _mode)
+{
+    
+    detection_color.clear();
+    if( _mode == ANNOTATION_COLOR_MODE_DEFAULT ){
+        for( int i = 0; i < classNamesVec.size(); i++ ){
+            detection_color.push_back(ofColor(100*((i+1)%2)+100,
+                                              50*((i+2)%3)+100,
+                                              25*((i+3)%4)+100,
+                                              255));
+        }
+    }
+    else{
+        for( int i = 0; i < classNamesVec.size(); i++ ){
+            detection_color.push_back(ofColor(100*((i+1)%2),
+                                              50*((i+2)%3),
+                                              25*((i+3)%4),
+                                              255));
+        }
+    }
+}
 void ofxOpenCvDnnObjectDetection::setConfidenceThreshold(float _threshold)
 {
     if( 0.0 <= _threshold && _threshold <= 1.0){
@@ -444,6 +892,18 @@ void ofxOpenCvDnnObjectDetection::loadBoundingBoxFile(string _path_to_file)
 void ofxOpenCvDnnObjectDetection::saveAnnotation()
 {
     saveBoundingBoxToFile(filename_txt);
+    if( !ofFile::doesFileExist(filename_jpg) ){
+        saveAnnotationImage();
+    }
+}
+void ofxOpenCvDnnObjectDetection::saveAnnotationImage()
+{
+    ofSaveImage(image_annotation, filename_jpg, OF_IMAGE_QUALITY_BEST);
+}
+void ofxOpenCvDnnObjectDetection::removeAnnotationFiles()
+{
+    ofSystem("rm "+filename_jpg);
+    ofSystem("rm "+filename_txt);
 }
 void ofxOpenCvDnnObjectDetection::loadAnnotationDir(string _path_to_file)
 {
@@ -471,6 +931,7 @@ void ofxOpenCvDnnObjectDetection::saveBoundingBoxToFile(string _path_to_file)
 {
     ofFile file;
     if( file.open(_path_to_file, ofFile::WriteOnly) ){
+        cout << filename_txt << endl;
         for( int i = 0; i < train.size(); i++){
             train[i].r.standardize();
             file <<
@@ -490,8 +951,15 @@ void ofxOpenCvDnnObjectDetection::saveBoundingBoxToFile(string _path_to_file)
     
 }
 
+void ofxOpenCvDnnObjectDetection::setAnnotationFilename(string _filename)
+{
+    filename = _filename;
+    filename_jpg = filename+".jpg";
+    filename_txt = filename+".txt";
+}
 void ofxOpenCvDnnObjectDetection::setNextAnnotation()
 {
+    if( dir_annotation.size() == 0 )return;
     pos_annotation_file++;
     if( pos_annotation_file > dir_annotation.size()-1 ){
         pos_annotation_file = dir_annotation.size()-1;
@@ -504,6 +972,7 @@ void ofxOpenCvDnnObjectDetection::setNextAnnotation()
 
 void ofxOpenCvDnnObjectDetection::setPreviousAnnotation()
 {
+    if( dir_annotation.size() == 0 )return;
     pos_annotation_file--;
     if( pos_annotation_file < 0 ){
         pos_annotation_file=0;
@@ -514,6 +983,44 @@ void ofxOpenCvDnnObjectDetection::setPreviousAnnotation()
     loadBoundingBoxFile(filename_txt);
 }
 
+void ofxOpenCvDnnObjectDetection::adjustGuiComponents()
+{
+    float w, h;
+   
+    
+    if( image_annotation.getHeight()+20*2 < r_class_selector.getHeight()+gui_basic.getHeight()+20*3 ){
+        h = r_class_selector.getHeight()+gui_basic.getHeight()+20*3;
+    }
+    else{
+        h = image_annotation.getHeight()+20*2;
+    }
+    ofSetWindowShape(image_annotation.getWidth()+getClassSelectorBoundingBox().getWidth()+20+20,h);
+
+}
+void ofxOpenCvDnnObjectDetection::setPositionAnnotation(int _pos, string _text_search_id)
+{
+    if( _text_search_id == "all"){
+        // do nothing
+    }
+    else{
+        vector<string>search_id = split(_text_search_id, ',');
+        //here
+    }
+    
+    pos_annotation_file = _pos;
+    if( pos_annotation_file < 0 ){
+        pos_annotation_file=0;
+    }
+    if( pos_annotation_file >= dir_annotation.size())pos_annotation_file = dir_annotation.size()-1;
+    
+    
+    filename_jpg = dir_annotation.getPath(pos_annotation_file);
+    filename_txt = Replace(dir_annotation.getPath(pos_annotation_file),".jpg", ".txt");
+    loadAnnotationImage(filename_jpg);
+    loadBoundingBoxFile(filename_txt);
+    adjustGuiComponents();
+    
+}
 void ofxOpenCvDnnObjectDetection::drawClassSelector(float _x, float _y, int _row)
 {
     // Show Class Selector
@@ -522,26 +1029,23 @@ void ofxOpenCvDnnObjectDetection::drawClassSelector(float _x, float _y, int _row
     
     float w_max = 0;
     for( int i = 0; i < classNamesVec.size(); i++ ){
-        float w_tmp = font_info.getStringBoundingBox(classNamesVec.at(i), 0, 0).getWidth();
+        float w_tmp = font_info.getStringBoundingBox(" ["+ofToString(i)+"]"+classNamesVec.at(i)+" ", 0, 0).getWidth();
         if( w_tmp > w_max ){
             w_max = w_tmp;
         }
     }
-    ofRectangle r_area(_x,
-                       _y,
-                       w_max*row,
-                       14*classNamesVec.size()/row+14);
+    r_class_selector.set(_x, _y,  w_max*row, 16*classNamesVec.size()/row+16);
 
     ofNoFill();
-    ofDrawRectangle(r_area);
-    font_info.drawString("Select a class name",r_area.x,r_area.y);
+    ofDrawRectangle(r_class_selector);
+    font_info.drawString("Select a class name",r_class_selector.x,r_class_selector.y);
     for( int i = 0; i < classNamesVec.size(); i++ ){
         x = _x+w_max*(i%row);
-        y = _y+14+14*(i/row);
+        y = _y+16+16*(i/row);
         ofNoFill();
         ofSetColor(detection_color.at(i));
         ofRectangle r_name;
-        r_name.set(font_info.getStringBoundingBox(classNamesVec.at(i),
+        r_name.set(font_info.getStringBoundingBox(" ["+ofToString(i)+"]"+classNamesVec.at(i)+"  ",
                                                   x,y));
 
         if( r_name.inside(ofGetMouseX(),ofGetMouseY()) ){
@@ -558,18 +1062,19 @@ void ofxOpenCvDnnObjectDetection::drawClassSelector(float _x, float _y, int _row
             ofDrawRectangle(r_name);
             
             ofSetColor(detection_color.at(i).getInverted());
-            font_info.drawString(classNamesVec.at(i),x,y);
+            font_info.drawString(" ["+ofToString(i)+"]"+classNamesVec.at(i),x,y);
                                  
         }
         else{
-            font_info.drawString(classNamesVec.at(i),x,y);
+            font_info.drawString(" ["+ofToString(i)+"]"+classNamesVec.at(i),x,y);
         }
     }
     
 }
 
-void ofxOpenCvDnnObjectDetection::addTrainObject(ofRectangle _r)
+void ofxOpenCvDnnObjectDetection::addTrainObject(int _class_id_selected, ofRectangle _r)
 {
+    class_id_selected = _class_id_selected;
     train.push_back(TrainObject(class_id_selected, classNamesVec.at(class_id_selected), _r));
 }
 
@@ -588,3 +1093,295 @@ std::vector<String> ofxOpenCvDnnObjectDetection::getOutputsNames(const Net& net)
     return names;
 }
 
+ofRectangle ofxOpenCvDnnObjectDetection::getClassSelectorBoundingBox()
+{
+    return r_class_selector;
+}
+
+bool ofxOpenCvDnnObjectDetection::checkAnnotationImage(float _threshold_area)
+{
+    update(image_annotation.getPixels());
+    for( int i = 0; i < object.size(); i++ ){
+        for( int j = 0; j < train.size(); j++ ){
+            // What is precision?: https://github.com/AlexeyAB/darknet
+            float precision = object[i].r.getIntersection(train[j].r).getArea()/object[i].r.getArea();
+            if( precision > _threshold_area){
+                if( object[i].class_id != train[j].id ){
+                    r_reconfirm = object[i].r.getIntersection(train[j].r);
+                    r_reconfirm_alpha = 255;
+                    str_debug = "Found a annotation to be reconfirmed.\n";
+                    str_debug += " Train:"+train[j].name+" and Detect: "+object[i].name+"\n";
+                    str_debug += " Precision: "+ofToString(precision)+"\n";
+                    return false;
+                }
+            }
+        }
+    }
+
+    
+    r_reconfirm.set(0,0,0,0);
+    return true;
+}
+
+void ofxOpenCvDnnObjectDetection::drawReconfirmAnnotation()
+{
+    // Show Bounding Box to be reconfirmed.
+    
+    ofSetColor(ofColor::darkRed, r_reconfirm_alpha);
+    ofFill();
+    float scale_x, scale_y;
+    scale_x = image_annotation.getWidth();
+    scale_y = image_annotation.getHeight();
+    ofDrawRectangle(r_reconfirm.x*scale_x,
+                    r_reconfirm.y*scale_y,
+                    r_reconfirm.getWidth()*scale_x,
+                    r_reconfirm.getHeight()*scale_y);
+
+    if( r_reconfirm_alpha > 0 )r_reconfirm_alpha=r_reconfirm_alpha-2;
+    
+    
+}
+
+void ofxOpenCvDnnObjectDetection::changeThreshold(float &_th)
+{
+    if( image_annotation.isAllocated() ){
+      update(image_annotation.getPixels());
+    }
+}
+void ofxOpenCvDnnObjectDetection::changeSeekbar(int &_frame)
+{
+    r_reconfirm_alpha = 0;
+    if( _frame > seekbar.getMax() )return;
+    if( _frame < 0)return;
+    if( mode_annotation == MODE_VIDEO_ANNOTATION){
+        video.setFrame(_frame);
+        train.clear();
+        setAnnotationFilename(path+ofGetTimestampString());
+    }
+    else if( mode_annotation == MODE_DIR_IMAGE_ANNOTATION){
+        train.clear();
+        setPositionAnnotation(_frame, text_search_id);
+    }
+}
+
+void ofxOpenCvDnnObjectDetection::changeDarkMode(bool & _mode)
+{
+    setAnnotationColorMode(_mode);
+
+    if( _mode == true )color_crossbar.set(ofColor::darkRed);
+    if( _mode == false )color_crossbar.set(ofColor::white);
+}
+
+void ofxOpenCvDnnObjectDetection::changeTextSearchID(string _str)
+{
+    cout << "Edited" <<endl;
+}
+
+void ofxOpenCvDnnObjectDetection::forwardAnnotationButton()
+{
+    if( seekbar < seekbar.getMax() )seekbar++;
+}
+
+void ofxOpenCvDnnObjectDetection::backAnnotationButton()
+{
+    if( seekbar > 0 )seekbar--;
+}
+
+void ofxOpenCvDnnObjectDetection::mouseMoved(ofMouseEventArgs &e)
+{
+    float x = e.x;
+    float y = e.y;
+    if( flg_show_yolo_detection ){
+        vector<Object>obj =  object;
+        for( int i = 0; i < obj.size(); i++ ){
+            if( obj[i].getScaledBB(image_annotation.getWidth(),
+                                   image_annotation.getHeight()).inside(x,y)){
+                class_id_selected =  obj[i].class_id;
+            }
+        }
+    }
+}
+
+//--------------------------------------------------------------
+void ofxOpenCvDnnObjectDetection::mouseDragged(ofMouseEventArgs &e)
+{
+    float x = e.x;
+    float y = e.y;
+    is_dragging = true;
+    ofRectangle r_img;
+    float w,h;
+    switch( mode_annotation )
+    {
+    }
+    r_img.set(0,0, image_annotation.getWidth(), image_annotation.getHeight());
+    if( r_img.inside(x,y) ){
+        r.width = x-r.x;
+        r.height = y-r.y;
+    }
+}
+
+//--------------------------------------------------------------
+void ofxOpenCvDnnObjectDetection::mousePressed(ofMouseEventArgs &e)
+{
+    float x = e.x;
+    float y = e.y;
+    r.set(x,y,0,0);
+    
+    if( flg_show_yolo_detection == false ){
+        for( int i = 0; i < train.size(); i++ ){
+            if( train.at(i).getScaledBB(image_annotation.getWidth(), image_annotation.getHeight()).inside(x,y)){
+                train.erase(train.begin()+i);
+                saveAnnotation();
+                if(mode_annotation == MODE_VIDEO_ANNOTATION ||
+                   mode_annotation == MODE_CAMERA_ANNOTATION ){
+                    if( train.size() == 0 ){
+                        removeAnnotationFiles();
+                    }
+                }
+            }
+        }
+    }
+    else{
+        for( int i = 0; i < object.size(); i++ ){
+            if( object.at(i).getScaledBB(image_annotation.getWidth(),                                              image_annotation.getHeight()).inside(x,y) ){
+                
+                
+                addTrainObject(object.at(i).class_id,
+                               object.at(i).r);
+                saveAnnotation();
+            }
+        }
+    }
+    
+    
+    
+}
+
+//--------------------------------------------------------------
+void ofxOpenCvDnnObjectDetection::mouseReleased(ofMouseEventArgs &e)
+{
+    float x = e.x;
+    float y = e.y;
+    is_dragging = false;
+    r.width = x-r.x;
+    r.height = y-r.y;
+    r.standardize();
+    
+    if( mode_annotation == MODE_CAMERA_ANNOTATION ){
+        if( train.size() == 0 && r.getArea() > 10){
+            setAnnotationFilename(path+ofGetTimestampString());
+        }
+    }
+    
+    if( mode_annotation == MODE_VIDEO_ANNOTATION ){
+        if( train.size() == 0 &&  r.getArea() > 10){
+            setAnnotationFilename(path+ofGetTimestampString());
+        }
+    }
+    
+    if( mode_annotation == MODE_AUDIO_ANNOTATION){
+        
+    }
+    
+    
+    ofRectangle r_img;
+    r_img.set(0,0, image_annotation.getWidth(), image_annotation.getHeight());
+    if( r.getArea() > 10 &&  r_img.inside(x,y) ){
+        r.x = r.x/image_annotation.getWidth();
+        r.y = r.y/image_annotation.getHeight();
+        r.width = r.width/image_annotation.getWidth();
+        r.height = r.height/image_annotation.getHeight();
+        
+        addTrainObject(class_id_selected, r);
+        saveAnnotation();
+    }
+    r.set(0,0,0,0);
+    
+    
+}
+
+//--------------------------------------------------------------
+void ofxOpenCvDnnObjectDetection::mouseEntered(ofMouseEventArgs &e)
+{
+}
+
+//--------------------------------------------------------------
+void ofxOpenCvDnnObjectDetection::mouseExit(ofMouseEventArgs &e)
+{
+}
+
+//--------------------------------------------------------------
+void ofxOpenCvDnnObjectDetection::dragEvent(ofDragInfo &dragInfo){
+    ofDirectory dir;
+    dir.open(dragInfo.files[0]);
+    str_debug = "Drag Event:\n "+dragInfo.files[0];
+   
+    
+    
+    if( dir.isDirectory() ){
+        if( video.isLoaded() )  video.closeMovie();
+        loadAnnotationDir(dragInfo.files[0]);
+        mode_annotation = MODE_DIR_IMAGE_ANNOTATION;
+        gui_frame.setPosition(0,image_annotation.getHeight());
+        gui_frame.setSize(image_annotation.getWidth(), 20);
+        gui_frame.setDefaultWidth(image_annotation.getWidth());
+        gui_frame.setWidthElements(image_annotation.getWidth());
+        seekbar.set("frame", 0, 0, dir_annotation.size()-1);
+        adjustGuiComponents();
+        dir.close();
+    }
+    else if( doesIncludeExtensions(dragInfo.files[0], {".mov", ".mp4"}) ){
+        if( video.isLoaded() ){
+            video.closeMovie();
+        }
+        ofFileDialogResult file = ofSystemSaveDialog("myAnnotation_", "Choose a saving directory");
+        if( !file.bSuccess )return;
+        path = file.getPath();
+        setAnnotationFilename(file.getPath()+ofGetTimestampString());
+        
+        if( video.isLoaded() )video.close();
+        video.load(dragInfo.files[0]);
+        mode_annotation = MODE_VIDEO_ANNOTATION;
+        seekbar.set("frame", 0, 0, video.getTotalNumFrames());
+        gui_frame.setPosition(0,video.getHeight());
+        gui_frame.setSize(video.getWidth(), 20);
+        gui_frame.setDefaultWidth(video.getWidth());
+        gui_frame.setWidthElements(video.getWidth());
+        video.play();
+
+        image_annotation.setFromPixels(video.getPixels());
+        adjustGuiComponents();
+        flg_pause_video = false;
+
+    }
+    else if( doesIncludeExtensions(dragInfo.files[0], {".jpg"})){
+        if( video.isLoaded() ){
+            video.closeMovie();
+        }
+        string str = dragInfo.files[0];
+        str.erase(str.begin()+str.length()-1);
+        str.erase(str.begin()+str.length()-1);
+        str.erase(str.begin()+str.length()-1);
+        str.erase(str.begin()+str.length()-1);
+        setAnnotationFilename(str);
+        mode_annotation = MODE_IMAGE_ANNOTATION;
+        loadAnnotationImage(filename_jpg);
+        loadBoundingBoxFile(filename_txt);
+        adjustGuiComponents();
+        
+    }
+    else if( doesIncludeExtensions(dragInfo.files[0], {".wav", "WAV"})){
+        if( video.isLoaded() ){
+            video.closeMovie();
+        }
+        ofFileDialogResult file = ofSystemSaveDialog("myAnnotation_", "Choose a saving directory");
+        if( !file.bSuccess )return;
+        path = file.getPath();
+        setAnnotationFilename(file.getPath()+ofGetTimestampString());
+        mode_annotation = MODE_AUDIO_ANNOTATION;
+    }
+    else{
+        ofSystemAlertDialog("Error: Filetype is not allowed.");
+    }
+    dir.close();
+}
