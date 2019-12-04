@@ -3,6 +3,7 @@
 ![sample_images/result_sample01.gif](sample_images/result_sample01.gif)
 ## Description
 ofxOpenCvDnnObjectDetection is an addon for openframeworks.
+This is a 0.10 branch for openframeworks 0.10 version. If you are using latest version oF 0.11, use a master branch.
 
 OpenCV v.3.3.1 or upper includes dnn module ( https://docs.opencv.org/3.4.1/da/d9d/tutorial_dnn_yolo.html ) in their own package. Therefore I designed ofxOpenCvDnnObjectDetection with OpenCV v.3.3.1 or upper version.
 
