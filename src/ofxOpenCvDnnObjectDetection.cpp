@@ -147,12 +147,12 @@ void ofxOpenCvDnnObjectDetection::keyPressed(ofKeyEventArgs &e)
         }
     }
     else if( key == 'X' ){
-        train.clear();
-        saveAnnotation();
-        if(mode_annotation == MODE_CAMERA_ANNOTATION ||
-           mode_annotation == MODE_VIDEO_ANNOTATION){
-            removeAnnotationFiles();
-        }
+//        train.clear();
+//        saveAnnotation();
+//        if(mode_annotation == MODE_CAMERA_ANNOTATION ||
+//           mode_annotation == MODE_VIDEO_ANNOTATION){
+//            removeAnnotationFiles();
+//        }
     }
     else if( key == 'c' ){
         ofFileDialogResult file = ofSystemSaveDialog("myAnnotation_", "Choose a Saving Directory");
@@ -597,7 +597,7 @@ void ofxOpenCvDnnObjectDetection::drawAnnotationControls()
         if( ofGetSeconds() %2 == 0)str += ">";
         
         str+="\n\n";
-        str += "[README]\n\nSingle image annotation: Drag and Drop an image.\n - .jpg is only allowd.\nImage directory annotation: Drag and Drop a directory.\n - needs to include .jpg and .txt(yolo) file.\nCamera annotation: press 'c' key.\nVideo file annotation: Drag and Drop a video file.\n - .mov and .mp4 are allowd.\n\nIf you wanna replace dnn network files, press 'o' to open a data directory. \nThen replace yolo.weights and yolo.cfg files to other files and Restart this app.\n\nAuthor:Tetsuaki Baba, https://tetsuakibaba.jp, 2019\nLisence:MIT License";
+        str += "[README]\n\nSingle image annotation: Drag and Drop an image.\n - .jpg is only allowd.\nImage directory annotation: Drag and Drop a directory.\n - needs to include .jpg and .txt(yolo) file.\nCamera annotation: press 'c' key.\nVideo file annotation: Drag and Drop a video file.\n - .mov and .mp4 are allowd.\n\nIf you wanna replace dnn network files, press 'o' to open a data directory. \nThen replace yolo.weights and yolo.cfg files to other files and Restart this app.\n\nAuthor:Tetsuaki Baba, https://tetsuakibaba.jp, 2020\nLisence:MIT License";
         ofRectangle r = font_message.getStringBoundingBox(str,0,0);
         font_message.drawString(str, ofGetWidth()/2-r.getWidth()/2, ofGetHeight()/2-r.getHeight()/2);
     }
@@ -728,7 +728,7 @@ void ofxOpenCvDnnObjectDetection::setupAnnotationGui()
     //    gui_basic.add(text_search_id.set("Search Class ID", "all"));
     gui_basic.add(button_forward.setup("Forward Annotation Image [f]"));
     gui_basic.add(button_back.setup("Back Annotation Image [b]"));
-    gui_basic.add(b_ai_checker.setup("Run Auto Annotation Checker", false));
+    gui_basic.add(b_ai_checker.setup("Run Auto Annotation Checker [r]", false));
     gui_basic.add(threshold_precision.set("Precision Threshold", 0.8, 0.0, 1.0));
     enableAnnotationControl();
 }

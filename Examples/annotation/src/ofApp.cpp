@@ -7,8 +7,8 @@ void ofApp::setup(){
     // yolo setting up
     ofSetFrameRate(60);
     detector.setup(
-                   ofToDataPath("dnn/config.cfg"),
-                   ofToDataPath("dnn/model.weights"),
+                   ofToDataPath("dnn/yolo.cfg"),
+                   ofToDataPath("dnn/yolo.weights"),
                    ofToDataPath("dnn/classlist.txt")
                    );
 //    detector.setup(ofToDataPath("dnn/tmp/yolov3_m2.prototxt"),  ofToDataPath("dnn/tmp/yolov3_m2.caffemodel"),ofToDataPath("dnn/classlist.txt"));

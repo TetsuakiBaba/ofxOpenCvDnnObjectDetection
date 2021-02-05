@@ -11,8 +11,8 @@ void ofApp::setup(){
 //               ofToDataPath("dnn/coco.txt"));
     
     detector.setNetworkImageSize(416, 416);
-    detector.setup(ofToDataPath("dnn/yolov3-tiny.cfg"),
-               ofToDataPath("dnn/yolov3-tiny.weights"),
+    detector.setup(ofToDataPath("dnn/yolov2-tiny.cfg"),
+               ofToDataPath("dnn/yolov2-tiny.weights"),
                ofToDataPath("dnn/coco.txt"));
     
     // MobileNet-SSD
