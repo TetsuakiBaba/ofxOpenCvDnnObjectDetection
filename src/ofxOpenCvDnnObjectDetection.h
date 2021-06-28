@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cstdlib>
 
+
 #define ANNOTATION_COLOR_MODE_DEFAULT 0
 #define ANNOTATION_COLOR_MODE_DARK 1
 
@@ -35,15 +36,29 @@ public:
         name = _name;
         r.set(_r);
     }
+    TrainObject(int _id, string _name, ofPolyline _p){
+        id = _id;
+        name = _name;
+        p = _p;
+        p.close();
+    }
+    TrainObject(){
+        
+    }
     ~TrainObject(){
         
     }
     int id;
     string name;
-    ofRectangle r;
+    ofRectangle r; // for object detection
     ofRectangle getScaledBB(float _w, float _h);
+    ofPolyline p;  // for semantic segmentation
+};
 
-    
+struct DraggingPoint{
+    ofPoint p;
+    int id;
+    int id_point;
 };
 
 class Object{
@@ -98,10 +113,14 @@ public:
     
     void loadAnnotationDir(string _path_to_file);
     void loadAnnotationImage(string _path_to_file);
+    void loadAnnotationFile(string _path_to_file);
     void loadBoundingBoxFile(string _path_to_file);
+    void loadSegmentationFile(string _path_to_file);
     void saveAnnotation();
     void saveAnnotationImage();
+    void deleteAnnotation(int _position);
     void saveBoundingBoxToFile(string _path_to_file);
+    void saveSegmentationToFile(string _path_to_file);
     void removeAnnotationFiles();
 
     bool checkAnnotationImage(float _threshold_area);
@@ -112,10 +131,14 @@ public:
     void drawReconfirmAnnotation();
     ofRectangle r_class_selector;
     void addTrainObject(int _class_id_selected, ofRectangle _r);
+    void addTrainObject(int _class_id_selected, ofPolyline _p);
 
     
-    vector<Object> object;
+    // Object というクラス名は opencv_contribのtracking周りで衝突するので，cv::Obejctじゃないよ，グローバルだよ．と教えてあげる
+    vector<::Object>object;
     vector<TrainObject>train;
+    vector<TrainObject>train_cache; // 削除したアノテーションを一時保存
+    vector<DraggingPoint>dragging_points;
     uint64_t inference_time;
     
     cv::Mat toCV(ofPixels &pix);
@@ -146,6 +169,10 @@ public:
     int mode_annotation;
     ofVideoPlayer video;
     ofVideoGrabber camera;
+
+    ofxPanel gui_annotation_selector;
+    ofxToggle toggle_check_segmentation;
+
     
     ofxPanel gui_frame;
     ofParameter<int>seekbar;
@@ -157,18 +184,40 @@ public:
     ofxToggle darkmode;
     ofxToggle b_magnify;
     ofxToggle b_magnify_pointing;
+    bool is_command_key_pressed;
+    bool is_alt_key_pressed;
+    bool is_dragging_points;
     ofParameter<float>magnify;
     ofParameter<string>text_search_id;
     ofxButton button_forward;
     ofxButton button_back;
+    ofxButton button_save_gui_settings;
+    ofxButton button_load_gui_settings;
     ofxToggle b_ai_checker;
+    ofParameter<int>alpha_annotation;
+    ofParameter<int>snapsize;
+    ofxToggle toggle_show_class_label;
+    ofParameter<string>label_hovered;
+    
+    ofxPanel gui_appearance;
+    ofxColorSlider color_working_polyline;
+    ofxColorSlider color_working_vertex;
+    ofxColorSlider color_train_polyline;
+    ofxColorSlider color_train_vertex;
+
+    
+    
     ofParameter<float>threshold_precision;
+    void annotationSelect(bool &_mode);
+
     void changeTextSearchID(string _str);
     void changeDarkMode(bool &_mode);
     void changeSeekbar(int &_frame);
     void changeThreshold(float &_th);
     void forwardAnnotationButton();
     void backAnnotationButton();
+    void saveGuiSettings();
+    void loadGuiSettings();
     string path;
     bool flg_show_yolo_detection;
     bool flg_pause_camera;
@@ -176,9 +225,15 @@ public:
     bool is_shift_pressed;
     ofColor color_crossbar;
     
+    // 作業用矩形領域
     ofRectangle r;
+    
+    // 作業用segmentation領域
+    ofPolyline p;
+    
     ofTrueTypeFont font_debug;
     ofTrueTypeFont font_message;
     float mouseX;
     float mouseY;
+    int key_previous;
 };

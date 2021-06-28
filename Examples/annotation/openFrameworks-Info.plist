@@ -20,9 +20,9 @@
 	<string>${ICON}</string>
 	<key>NSCameraUsageDescription</key>
 	<string>This app needs to access the camera</string>
-	<key>NSHighResolutionCapable</key>
-	<false/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>This app needs to access the microphone</string>
+	<key>NSHighResolutionCapable</key>
+	<false/>
 </dict>
 </plist>

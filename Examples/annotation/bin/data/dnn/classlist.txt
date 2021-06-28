@@ -37,3 +37,5 @@ signboard
 flag
 postbox
 safetycone
+sidewalk
+road

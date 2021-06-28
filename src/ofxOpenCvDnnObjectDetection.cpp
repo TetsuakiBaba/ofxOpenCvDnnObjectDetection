@@ -112,12 +112,15 @@ void ofxOpenCvDnnObjectDetection::disableAnnotationControl()
 void ofxOpenCvDnnObjectDetection::keyPressed(ofKeyEventArgs &e)
 {
     int key = e.key;
-    
+
     if( key == OF_KEY_RIGHT || key == 'f' ){
         switch( mode_annotation )
         {
             case MODE_DIR_IMAGE_ANNOTATION:
-                if( seekbar < dir_annotation.size()-1 )seekbar++;
+                if( seekbar < dir_annotation.size()-1 ){
+                    seekbar++;
+                    train_cache.clear();
+                }
                 break;
             case MODE_VIDEO_ANNOTATION:
                 if(video.isLoaded())video.nextFrame();
@@ -130,7 +133,10 @@ void ofxOpenCvDnnObjectDetection::keyPressed(ofKeyEventArgs &e)
         switch( mode_annotation )
         {
             case MODE_DIR_IMAGE_ANNOTATION:
-                if( seekbar > 0)seekbar--;
+                if( seekbar > 0){
+                    seekbar--;
+                    train_cache.clear();
+                }
                 break;
             case MODE_VIDEO_ANNOTATION:
                 if( video.isLoaded())video.previousFrame();
@@ -139,22 +145,24 @@ void ofxOpenCvDnnObjectDetection::keyPressed(ofKeyEventArgs &e)
                 break;
         }
     }
-    else if( key == OF_KEY_CONTROL){
+    else if( key == 'd' && key != key_previous){
         flg_show_yolo_detection = true;
         if( mode_annotation == MODE_VIDEO_ANNOTATION && flg_pause_video == true ){
             video.update();
             update(video.getPixels());
         }
+        else if( mode_annotation == MODE_DIR_IMAGE_ANNOTATION ){
+            update(image_annotation.getPixels());
+        }
     }
     else if( key == 'X' ){
-//        train.clear();
-//        saveAnnotation();
-//        if(mode_annotation == MODE_CAMERA_ANNOTATION ||
-//           mode_annotation == MODE_VIDEO_ANNOTATION){
-//            removeAnnotationFiles();
-//        }
+        if( toggle_check_segmentation){
+            if( train.size() > 0){
+                deleteAnnotation(train.size()-1);
+            }
+        }
     }
-    else if( key == 'c' ){
+    else if( key == 'C' ){
         ofFileDialogResult file = ofSystemSaveDialog("myAnnotation_", "Choose a Saving Directory");
         if( file.bSuccess ){
             path = file.getPath();
@@ -199,9 +207,6 @@ void ofxOpenCvDnnObjectDetection::keyPressed(ofKeyEventArgs &e)
             setAnnotationFilename(path+ofGetTimestampString());
         }
     }
-    else if( key == 'd' ){
-        darkmode = !darkmode;
-    }
     else if( key == 'o' ){
         ofSystem("open "+ofToDataPath("dnn/"));
     }
@@ -210,17 +215,61 @@ void ofxOpenCvDnnObjectDetection::keyPressed(ofKeyEventArgs &e)
         b_magnify = true;
     }
     else if( key == OF_KEY_SUPER ){
+        is_command_key_pressed = true;
+    }
+    else if( key == 'm' ){
         b_magnify_pointing = true;
     }
     else if( key == 'r' ){
         b_ai_checker = true;
     }
+    else if( (key == 'c' && key_previous != 'c') || key == OF_KEY_RETURN){
+        if( p.getVertices().size() >= 3 ){
+            addTrainObject(class_id_selected, p);
+            saveAnnotation();
+            p.clear();
+        }
+        else{
+            ofSystemAlertDialog("頂点数は3点以上必要です");
+        }
+    }
+    else if( key == 'z' && is_command_key_pressed == false){
+        if( p.getVertices().size() > 0 ){
+            p.getVertices().erase(p.getVertices().end()-1);
+        }
+    }
+    else if( key =='z' && is_command_key_pressed == true ){
+        if( train_cache.size() > 0 ){
+            train.push_back(train_cache.at(train_cache.size()-1));
+            saveAnnotation();
+            train_cache.erase(train_cache.end()-1);
+        }
+    }
+    else if( key == OF_KEY_ALT ){
+        is_alt_key_pressed = true;
+    }
+    else if( key == 's' ){
+        toggle_show_class_label = !toggle_show_class_label;
+    }
+    else if( key == 'S' ){
+        saveGuiSettings();
+    }
+    else if( key == 'L' ){
+        loadGuiSettings();
+    }
+    else if( key == 'P' ){
+        ofImage img;
+        img.grabScreen(0,0, image_annotation.getWidth(), image_annotation.getHeight() );
+        img.save(ofGetTimestampString()+".jpg", OF_IMAGE_QUALITY_BEST);
+
+    }
+    key_previous = key;
 }
 
 void ofxOpenCvDnnObjectDetection::keyReleased(ofKeyEventArgs &e)
 {
     int key = e.key;
-    if( key == OF_KEY_CONTROL){
+    if( key == 'd'){
         flg_show_yolo_detection = false;
     }
     else if( key == OF_KEY_SHIFT ){
@@ -228,8 +277,15 @@ void ofxOpenCvDnnObjectDetection::keyReleased(ofKeyEventArgs &e)
         b_magnify = false;
     }
     if( key == OF_KEY_SUPER ){
+        is_command_key_pressed = false;
+    }
+    else if( key == 'm' ){
         b_magnify_pointing = false;
     }
+    else if( key == OF_KEY_ALT ){
+        is_alt_key_pressed = false;
+    }
+    key_previous = 0;
 }
 
 ofRectangle Object::getScaledBB(float _x, float _y, float _w, float _h)
@@ -267,6 +323,7 @@ ofRectangle TrainObject::getScaledBB(float _w, float _h)
 void ofxOpenCvDnnObjectDetection::draw(float _x, float _y, float _w, float _h)
 {
     for( int i = 0; i < object.size(); i++ ){
+        // for Object Detection
         ofNoFill();
         ofSetLineWidth(3);
         ofSetColor(detection_color.at(object[i].class_id));
@@ -277,7 +334,8 @@ void ofxOpenCvDnnObjectDetection::draw(float _x, float _y, float _w, float _h)
         ofDrawRectangle(r_scaled.x, r_scaled.y-18,r_scaled.width,18);
         ofSetColor(ofColor::white);
         font_info.drawString("NO["+ ofToString(i) +"] ID:["+ofToString(object.at(i).class_id)+"]: "+object.at(i).name + ": " + ofToString(object.at(i).p),
-                                    r_scaled.x,r_scaled.y);
+                             r_scaled.x,r_scaled.y);
+        
     }
 }
 
@@ -287,31 +345,154 @@ void ofxOpenCvDnnObjectDetection::drawAnnotation(float _x, float _y, float _w, f
     if( image_annotation.isAllocated() ){
         image_annotation.draw(0,0, _w, _h);
     }
+    
+    int alpha = alpha_annotation;
+    int alpha_selected = alpha_annotation+50;
+    if( alpha_selected > 255 ) alpha_selected = 255;
 
+    // 登録したアノテーションの表示
     for( int i = 0; i < train.size(); i++ ){
         ofNoFill();
         ofSetLineWidth(3);
-        ofSetColor(detection_color.at(train[i].id),150);
-        ofRectangle r_scaled = train.at(i).getScaledBB(_w, _h);
-
-        ofDrawRectangle(r_scaled);
+        ofSetColor(detection_color.at(train[i].id),alpha);
         
-        ofFill();
-        ofDrawRectangle(r_scaled.x, r_scaled.y-18,r_scaled.width,18);
-        ofSetColor(ofColor::white);
-        font_info.drawString("["+ofToString(train.at(i).id)+"]: "+train.at(i).name,                          r_scaled.x,r_scaled.y);
-
-    }
-    
-
-    for( int i = 0; i < train.size(); i++ ){
-        ofSetColor(detection_color[train[i].id],150);
-        if( train[i].getScaledBB(image_annotation.getWidth(), image_annotation.getHeight()). inside(ofGetMouseX(), ofGetMouseY()) ){
+        // Object Detection
+        if( toggle_check_segmentation == false ){
+            ofRectangle r_scaled = train.at(i).getScaledBB(_w, _h);
+            ofDrawRectangle(r_scaled);
             ofFill();
-            ofDrawRectangle(train[i].getScaledBB(image_annotation.getWidth(), image_annotation.getHeight()));
+            ofDrawRectangle(r_scaled.x, r_scaled.y-18,r_scaled.width,18);
+            ofSetColor(color_train_polyline);
+            if( toggle_show_class_label ){
+                font_info.drawString("["+ofToString(train.at(i).id)+"]: "+train.at(i).name,                          r_scaled.x,r_scaled.y);
+            }
+        }
+        // Segmentation
+        else{
+            ofRectangle r_scaled = train.at(i).getScaledBB(_w, _h);
+            
+            ofBeginShape();
+            for( int j = 0; j < train[i].p.getVertices().size(); j++ ){
+
+                // マウスカーソルが乗っているとき
+                if( ofDist(train[i].p.getVertices()[j].x, train[i].p.getVertices()[j].y,
+                           ofGetMouseX(), ofGetMouseY()) <= snapsize){
+                    ofFill();
+                    ofSetColor(ofColor::aliceBlue, alpha_selected);
+                    ofDrawCircle(train[i].p.getVertices()[j].x, train[i].p.getVertices()[j].y, snapsize);
+                }
+                // 通常表示
+                else{
+                    ofSetColor(color_train_vertex,alpha);//detection_color[train[i].id],alpha);
+                    ofNoFill();
+                    ofDrawCircle(train[i].p.getVertices()[j].x, train[i].p.getVertices()[j].y, snapsize);
+                    ofFill();
+                    ofSetColor(detection_color[train[i].id],alpha);
+                }
+                
+                ofFill();
+                ofSetColor(detection_color[train[i].id],alpha);
+                ofVertex(train[i].p.getVertices()[j].x, train[i].p.getVertices()[j].y);
+            }
+            ofEndShape();
+           
+            ofFill();
+            ofSetColor(color_train_polyline);
+            train[i].p.draw();
+            if( toggle_show_class_label ){
+                font_info.drawString("["+ofToString(train.at(i).id)+"]: "+train.at(i).name,                          train.at(i).p.getCentroid2D().x,train.at(i).p.getCentroid2D().y);
+            }
         }
     }
 
+
+    // マウスホバーしたときの該当領域表示
+    for( int i = 0; i < train.size(); i++ ){
+        ofSetColor(detection_color[train[i].id],150);
+        if( toggle_check_segmentation == false ){
+            if( train[i].getScaledBB(image_annotation.getWidth(), image_annotation.getHeight()). inside(ofGetMouseX(), ofGetMouseY()) ){
+                ofFill();
+                ofDrawRectangle(train[i].getScaledBB(image_annotation.getWidth(), image_annotation.getHeight()));
+            }
+        }
+        else{
+            if( train[i].p.inside(ofGetMouseX(), ofGetMouseY()) ){
+                label_hovered = train[i].name;
+                
+                ofFill();
+                ofBeginShape();
+                for( int j = 0; j < train[i].p.getVertices().size(); j++ ){
+                    ofVertex(train[i].p.getVertices()[j].x, train[i].p.getVertices()[j].y);
+                }
+                ofEndShape();
+                if( toggle_show_class_label) ofDrawBitmapStringHighlight(label_hovered, ofGetMouseX()+5, ofGetMouseY()-5);
+            }
+        }
+    }
+
+    // リアルタイムのpolyline表示部分
+    if( toggle_check_segmentation ){
+        ofNoFill();
+        ofSetColor(color_working_polyline);
+        ofSetLineWidth(3.0);
+        ofBeginShape();
+        for( int i = 0; i < p.getVertices().size(); i++ ){
+            ofVertex(p.getVertices()[i].x, p.getVertices()[i].y);
+            ofDrawCircle(p.getVertices()[i].x, p.getVertices()[i].y, snapsize);
+        }
+        ofEndShape();
+        
+        // 最後のポイント、最初のポイントと現在のマウスポイント位置を線分で表示する
+        if( p.getVertices().size() > 0 ){
+            ofNoFill();
+            ofSetColor(color_working_vertex);
+            ofDrawLine(ofGetMouseX(), ofGetMouseY(),
+                       p.getVertices()[p.getVertices().size()-1].x,
+                       p.getVertices()[p.getVertices().size()-1].y);
+            ofSetColor(color_working_vertex, 50);
+            ofDrawLine(ofGetMouseX(), ofGetMouseY(),
+                       p.getVertices()[0].x,
+                       p.getVertices()[0].y);
+            // 最初のポイントにマウスを載せてる場合は色をつけて丸を表示
+            if( p.getVertices().size() > 1 ){
+                if( ofDist(ofGetMouseX(),ofGetMouseY(),
+                           p.getVertices()[0].x, p.getVertices()[0].y) <= snapsize ){
+                    ofFill();
+                    ofSetColor(ofColor::seaGreen);
+                    ofDrawCircle(p.getVertices()[0].x, p.getVertices()[0].y, snapsize);
+                }
+            }
+        }
+        
+        // alt key を押している場合は吸着表示（大きめの丸を描く）
+        if( is_alt_key_pressed == true){
+            ofNoFill();
+            ofSetColor(color_working_vertex);
+            ofDrawCircle(mouseX, mouseY, snapsize);
+            // もし吸着領域内であれば、該当する登録済み座標を追加する
+            // （ただしすでに同じ座標が登録されている場合は無視
+            for( int i = 0; i < train.size(); i++ ){
+                for( int j = 0; j < train[i].p.getVertices().size(); j++){
+                    if( ofDist(train[i].p.getVertices()[j].x,
+                               train[i].p.getVertices()[j].y,
+                               ofGetMouseX(),
+                               ofGetMouseY()) <= 2*snapsize ){
+                        for( int k = 0; k < p.getVertices().size(); k++){
+                            if((int)p.getVertices()[k].x == (int)train[i].p.getVertices()[j].x &&
+                               (int)p.getVertices()[k].y == (int)train[i].p.getVertices()[j].y ){
+                                return; // なにも登録しないで return
+                            }
+                        }
+                        p.addVertex(train[i].p.getVertices()[j].x,
+                                    train[i].p.getVertices()[j].y);
+                        
+                    }
+                }
+            }
+            
+        }
+                   
+    }
 }
 
 
@@ -361,28 +542,47 @@ void ofxOpenCvDnnObjectDetection::postprocess(Mat& frame, const std::vector<Mat>
         // Network produces output blob with a shape 1x1xNx7 where N is a number of
         // detections and an every detection is a vector of values
         // [batchId, classId, confidence, left, top, right, bottom]
-        CV_Assert(outs.size() == 1);
-        float* data = (float*)outs[0].data;
-        for (size_t i = 0; i < outs[0].total(); i += 7)
-        {
-            float confidence = data[i + 2];
-          
-            if (confidence > confidenceThreshold)
-            {
-                float left = (data[i + 3] * frame.cols)/input_width;
-                float top = (data[i + 4] * frame.rows)/input_height;
-                float  right = (data[i + 5] * frame.cols)/input_width;
-                float bottom = (data[i + 6] * frame.rows)/input_height;
-                float width = right - left ;
-                float height = bottom - top ;
-                
-                String label = String(classNamesVec[data[i+1]-1]);
-                ofRectangle r(left,top,width,height);
-                object.push_back(Object(data[i+1]-1, label, confidence, r.x,r.y, r.width, r.height));
-                
-//                classIds.push_back((int)(data[i + 1]) - 1);  // Skip 0th background class id.
-//                boxes.push_back(Rect(left, top, width, height));
-  //              confidences.push_back(confidence);
+//        CV_Assert(outs.size() == 1);
+//        float* data = (float*)outs[0].data;
+//        for (size_t i = 0; i < outs[0].total(); i += 7)
+//        {
+//            float confidence = data[i + 2];
+//
+//            if (confidence > confidenceThreshold)
+//            {
+//                float left = (data[i + 3] * frame.cols)/input_width;
+//                float top = (data[i + 4] * frame.rows)/input_height;
+//                float  right = (data[i + 5] * frame.cols)/input_width;
+//                float bottom = (data[i + 6] * frame.rows)/input_height;
+//                float width = right - left ;
+//                float height = bottom - top ;
+//
+//                String label = String(classNamesVec[data[i+1]-1]);
+//                ofRectangle r(left,top,width,height);
+//                object.push_back(::Object(data[i+1]-1, label, confidence, r.x,r.y, r.width, r.height));
+//            }
+//        }
+        
+        
+        
+        CV_Assert(outs.size() > 0);
+
+        for (size_t k = 0; k < outs.size(); k++){
+            float* data = (float*)outs[k].data;
+            for (size_t i = 0; i < outs[k].total(); i += 7){
+                float confidence = data[i + 2];
+                if (confidence > confidenceThreshold){
+                    float left = (data[i + 3] * frame.cols)/input_width;
+                    float top = (data[i + 4] * frame.rows)/input_height;
+                    float  right = (data[i + 5] * frame.cols)/input_width;
+                    float bottom = (data[i + 6] * frame.rows)/input_height;
+                    float width = right - left ;
+                    float height = bottom - top ;
+                    
+                    String label = String(classNamesVec[data[i+1]-1]);
+                    ofRectangle r(left,top,width,height);
+                    object.push_back(::Object(data[i+1]-1, label, confidence, r.x,r.y, r.width, r.height));
+                }
             }
         }
     }
@@ -400,12 +600,16 @@ void ofxOpenCvDnnObjectDetection::postprocess(Mat& frame, const std::vector<Mat>
             {
                 Mat scores = outs[i].row(j).colRange(5, outs[i].cols);
                 cv::Point classIdPoint;
-                double confidence = 0.01;
+                double confidence;
+
                 minMaxLoc(scores, 0, &confidence, 0, &classIdPoint);
 
-
+                if (confidence > confidenceThreshold){
+//                    printf("%f, %f\n", confidence, confidenceThreshold);
+                }
+                
                 if (confidence > confidenceThreshold)
-                {               
+                {
                     float centerX = (data[0] * frame.cols)/input_width;
                     float centerY = (data[1] * frame.rows)/input_height;
                     float width =  (data[2] * frame.cols)/input_width;
@@ -415,7 +619,8 @@ void ofxOpenCvDnnObjectDetection::postprocess(Mat& frame, const std::vector<Mat>
 
                     String label = String(classNamesVec[classIdPoint.x]);
                     ofRectangle r(left,top,width,height);
-                    object.push_back(Object(classIdPoint.x, label, confidence, r.x,r.y, r.width, r.height));
+                   
+                    object.push_back(::Object(classIdPoint.x, label, confidence, r.x,r.y, r.width, r.height));
                 }
             }
         }
@@ -437,6 +642,7 @@ void ofxOpenCvDnnObjectDetection::postprocess(Mat& frame, const std::vector<Mat>
      */
 }
 
+// Main Draw
 void ofxOpenCvDnnObjectDetection::drawAnnotationControls()
 {
     mouseX = ofGetMouseX();
@@ -471,15 +677,17 @@ void ofxOpenCvDnnObjectDetection::drawAnnotationControls()
     }
     
     // Show bounding box selecting operation
-    ofNoFill();
-    ofSetLineWidth(2.0);
-    ofDrawRectangle(r);
-    
-    drawReconfirmAnnotation();
-    ofSetColor(ofColor::ghostWhite);
-    font_debug.drawString(str_debug,
-                          20+image_annotation.getWidth(),
-                          60+gui_basic.getHeight()+r_class_selector.getHeight());
+    if( toggle_check_segmentation == false){
+        ofNoFill();
+        ofSetLineWidth(2.0);
+        ofDrawRectangle(r);
+        
+        drawReconfirmAnnotation();
+        ofSetColor(ofColor::ghostWhite);
+        font_debug.drawString(str_debug,
+                              20+image_annotation.getWidth(),
+                              60+gui_basic.getHeight()+r_class_selector.getHeight());
+    }
     
     switch( mode_annotation )
     {
@@ -519,6 +727,7 @@ void ofxOpenCvDnnObjectDetection::drawAnnotationControls()
     
     
     gui_basic.draw();
+    gui_appearance.draw();
     
     // show cross
     ofSetLineWidth(1.0);
@@ -533,31 +742,79 @@ void ofxOpenCvDnnObjectDetection::drawAnnotationControls()
     
     // Magnify a mouse hoverd annotation
     if( b_magnify == true ){
-        bool is_showing_magnify = false;
-        for( int i = 0; i < train.size(); i++ ){
-            ofRectangle r_hover = train.at(i).getScaledBB(image_annotation.getWidth(),
-                                                          image_annotation.getHeight());
-            if( r_hover.inside(ofGetMouseX(), ofGetMouseY())){
-                ofImage img = image_annotation;
-                img.crop(r_hover.x,r_hover.y, r_hover.width, r_hover.height);
-                ofSetColor(255);
-                ofFill();
-                if( ofGetMouseY() > image_annotation.getHeight()/2 ){
-                    ofDrawRectangle(ofGetMouseX()-5+10, ofGetMouseY()-5-r_hover.height*magnify,
-                                    r_hover.width*magnify+10, r_hover.height*magnify+10);
-                    img.draw(ofGetMouseX()+10,ofGetMouseY()-r_hover.height*magnify,
-                             r_hover.width*magnify, r_hover.height*magnify);
+        if( toggle_check_segmentation == false ){
+            bool is_showing_magnify = false;
+            for( int i = 0; i < train.size(); i++ ){
+                ofRectangle r_hover = train.at(i).getScaledBB(image_annotation.getWidth(),
+                                                              image_annotation.getHeight());
+                if( r_hover.inside(ofGetMouseX(), ofGetMouseY())){
+                    ofImage img = image_annotation;
+                    img.crop(r_hover.x,r_hover.y, r_hover.width, r_hover.height);
+                    ofSetColor(255);
+                    ofFill();
+                    if( ofGetMouseY() > image_annotation.getHeight()/2 ){
+                        ofDrawRectangle(ofGetMouseX()-5+10, ofGetMouseY()-5-r_hover.height*magnify,
+                                        r_hover.width*magnify+10, r_hover.height*magnify+10);
+                        img.draw(ofGetMouseX()+10,ofGetMouseY()-r_hover.height*magnify,
+                                 r_hover.width*magnify, r_hover.height*magnify);
+                    }
+                    else{
+                        ofDrawRectangle(ofGetMouseX()-5+10, ofGetMouseY()-5,
+                                        r_hover.width*magnify+10, r_hover.height*magnify+10);
+                        img.draw(ofGetMouseX()+10, ofGetMouseY(),
+                                 r_hover.width*magnify, r_hover.height*magnify);
+                    }
+                    ofNoFill();
+                    is_showing_magnify = true;
                 }
-                else{
-                    ofDrawRectangle(ofGetMouseX()-5+10, ofGetMouseY()-5,
-                                    r_hover.width*magnify+10, r_hover.height*magnify+10);
-                    img.draw(ofGetMouseX()+10, ofGetMouseY(),
-                             r_hover.width*magnify, r_hover.height*magnify);
-                }
-                ofNoFill();
-                is_showing_magnify = true;
             }
-            
+        }
+        // segmentationの場合
+        else{
+            for( int i = 0; i < train.size(); i++ ){
+                ofPolyline pl = train.at(i).p;
+                if( pl.inside(ofGetMouseX(), ofGetMouseY()) ){
+                    ofImage img = image_annotation;
+                    ofRectangle r_hover = pl.getBoundingBox();
+                    img.crop(r_hover.x, r_hover.y, r_hover.width, r_hover.height);
+                    ofSetColor(255);
+//                    ofSetPolyMode(OF_POLY_WINDING_NONZERO);
+                    ofFill();
+                    if( ofGetMouseY() > image_annotation.getHeight()/2 ){
+                        ofDrawRectangle(ofGetMouseX()-5+10, ofGetMouseY()-5-r_hover.height*magnify,
+                                        r_hover.width*magnify+10, r_hover.height*magnify+10);
+                        img.draw(ofGetMouseX()+10,ofGetMouseY()-r_hover.height*magnify,
+                                 r_hover.width*magnify, r_hover.height*magnify);
+                        ofNoFill();
+                        ofSetLineWidth(3);
+                        ofSetColor(ofColor::red);
+                        ofBeginShape();
+                        pl.translate(glm::vec2(-r_hover.x,-r_hover.y));
+                        for( int j = 0; j < pl.getVertices().size(); j++){
+                            ofVertex(pl.getVertices()[j].x*magnify+ofGetMouseX()+10,
+                                     pl.getVertices()[j].y*magnify+ofGetMouseY()-r_hover.height*magnify);
+                        }
+                        ofEndShape(true);
+                    }
+                    else{
+                        ofDrawRectangle(ofGetMouseX()-5+10, ofGetMouseY()-5,
+                                        r_hover.width*magnify+10, r_hover.height*magnify+10);
+                        img.draw(ofGetMouseX()+10, ofGetMouseY(),
+                                 r_hover.width*magnify, r_hover.height*magnify);
+                        ofNoFill();
+                        ofSetLineWidth(3);
+                        ofSetColor(ofColor::red);
+                        ofBeginShape();
+                        pl.translate(glm::vec2(-r_hover.x,-r_hover.y));
+                        for( int j = 0; j < pl.getVertices().size(); j++){
+                            ofVertex(pl.getVertices()[j].x*magnify+ofGetMouseX()+10,
+                                     pl.getVertices()[j].y*magnify+ofGetMouseY());
+                        }
+                        ofEndShape(true);
+                    }
+
+                }
+            }
         }
     }
     if( b_magnify_pointing ){
@@ -596,8 +853,9 @@ void ofxOpenCvDnnObjectDetection::drawAnnotationControls()
         String str = "Drag and drop your file to start ";
         if( ofGetSeconds() %2 == 0)str += ">";
         
+        gui_annotation_selector.draw();
         str+="\n\n";
-        str += "[README]\n\nSingle image annotation: Drag and Drop an image.\n - .jpg is only allowd.\nImage directory annotation: Drag and Drop a directory.\n - needs to include .jpg and .txt(yolo) file.\nCamera annotation: press 'c' key.\nVideo file annotation: Drag and Drop a video file.\n - .mov and .mp4 are allowd.\n\nIf you wanna replace dnn network files, press 'o' to open a data directory. \nThen replace yolo.weights and yolo.cfg files to other files and Restart this app.\n\nAuthor:Tetsuaki Baba, https://tetsuakibaba.jp, 2020\nLisence:MIT License";
+        str += "[README]\n\nSingle image annotation: Drag and Drop an image.\n - .jpg is only allowd.\nImage directory annotation: Drag and Drop a directory.\n - needs to include .jpg and .txt(yolo) file.\nCamera annotation: press 'C' key.\nVideo file annotation: Drag and Drop a video file.\n - .mov and .mp4 are allowd.\n\nIf you wanna replace dnn network files, press 'o' to open a data directory. \nThen replace yolo.weights and yolo.cfg files to other files and Restart this app.\n\nAuthor:Tetsuaki Baba, https://tetsuakibaba.jp, 2021\nLisence:MIT License";
         ofRectangle r = font_message.getStringBoundingBox(str,0,0);
         font_message.drawString(str, ofGetWidth()/2-r.getWidth()/2, ofGetHeight()/2-r.getHeight()/2);
     }
@@ -611,9 +869,16 @@ void ofxOpenCvDnnObjectDetection::updateControls()
                           getClassSelectorBoundingBox().getHeight()+
                           getClassSelectorBoundingBox().getY()+20);
     gui_basic.setSize(r_class_selector.getWidth(),18);
-    gui_basic.setWidthElements(r_class_selector.getWidth());
-    gui_basic.setDefaultWidth(r_class_selector.getWidth());
-    
+    gui_basic.setWidthElements(r_class_selector.getWidth()/2-5);
+    gui_basic.setDefaultWidth(r_class_selector.getWidth()/2-5);
+
+    gui_appearance.setPosition(getClassSelectorBoundingBox().getX()+5+r_class_selector.getWidth()/2,
+                          getClassSelectorBoundingBox().getHeight()+
+                          getClassSelectorBoundingBox().getY()+20);
+    gui_appearance.setSize(r_class_selector.getWidth(),18);
+    gui_appearance.setWidthElements(r_class_selector.getWidth()/2-5);
+    gui_appearance.setDefaultWidth(r_class_selector.getWidth()/2-5);
+
     
     switch( mode_annotation )
     {
@@ -663,7 +928,6 @@ void ofxOpenCvDnnObjectDetection::updateControls()
 }
 void ofxOpenCvDnnObjectDetection::update(ofPixels &op)
 {
-    setConfidenceThreshold(threshold);
     object.clear();
     
     cv::Mat frame = toCV(op);
@@ -700,7 +964,11 @@ uint64_t ofxOpenCvDnnObjectDetection::getInferenceTime()
 
 void ofxOpenCvDnnObjectDetection::setupAnnotationGui()
 {
-  
+    gui_annotation_selector.setup();
+    gui_annotation_selector.setName("Annotation Type");
+    gui_annotation_selector.add(toggle_check_segmentation.setup("Segmentation", true));
+    toggle_check_segmentation.addListener(this, &ofxOpenCvDnnObjectDetection::annotationSelect);
+    
     gui_frame.setup();
     gui_frame.setName("Seek Bar");
     gui_frame.add(seekbar.set("frame", 0));
@@ -709,27 +977,49 @@ void ofxOpenCvDnnObjectDetection::setupAnnotationGui()
     darkmode.addListener(this, &ofxOpenCvDnnObjectDetection::changeDarkMode);
     button_forward.addListener(this, &ofxOpenCvDnnObjectDetection::forwardAnnotationButton);
     button_back.addListener(this, &ofxOpenCvDnnObjectDetection::backAnnotationButton);
-    
+    button_save_gui_settings.addListener(this, &ofxOpenCvDnnObjectDetection::saveGuiSettings);
+    button_load_gui_settings.addListener(this, &ofxOpenCvDnnObjectDetection::loadGuiSettings);
     gui_basic.setup();
     gui_basic.setName("Settings");
     gui_basic.loadFont(ofToDataPath("font/DIN Alternate Bold.ttf"), 10);
     gui_basic.setPosition(20,20);
     
     gui_basic.setSize(r_class_selector.getWidth(),18);
-    gui_basic.setWidthElements(r_class_selector.getWidth());
-    gui_basic.setDefaultWidth(r_class_selector.getWidth());
+    gui_basic.setWidthElements(r_class_selector.getWidth()/2);
+    gui_basic.setDefaultWidth(r_class_selector.getWidth()/2);
     gui_basic.add(fps.set("FPS", 30, 0, 60));
     gui_basic.add(threshold.set("Threshold", 0.4, 0.01, 1.0));
     gui_basic.add(network_image_size.set("Network Image", 416, 64,416));
-    gui_basic.add(darkmode.setup("Dark Mode[d]", false));
+    gui_basic.add(darkmode.setup("Dark Mode", false));
     gui_basic.add(b_magnify.setup("Magnify Annotation [Shift]", false));
-    gui_basic.add(b_magnify_pointing.setup("Magnify Pointing [Cmd]",false));
-    gui_basic.add(magnify.set("Magnify Scale",1.0, 1.0, 4.0));
-    //    gui_basic.add(text_search_id.set("Search Class ID", "all"));
+    gui_basic.add(b_magnify_pointing.setup("Magnify Pointing [m]",false));
+    gui_basic.add(magnify.set("Magnify Scale",1.0, 0.1, 4.0));
+    gui_basic.add(text_search_id.set("Search Class ID", "all"));
     gui_basic.add(button_forward.setup("Forward Annotation Image [f]"));
     gui_basic.add(button_back.setup("Back Annotation Image [b]"));
     gui_basic.add(b_ai_checker.setup("Run Auto Annotation Checker [r]", false));
     gui_basic.add(threshold_precision.set("Precision Threshold", 0.8, 0.0, 1.0));
+    gui_basic.add(snapsize.set("Pointing Snap(Segmentation)", 10, 1, 25));
+    gui_basic.add(toggle_show_class_label.setup("Show Class Label [s]", true));
+    gui_basic.add(label_hovered.set("Hovered Class Label","--"));
+    gui_basic.add(button_save_gui_settings.setup("Save Gui Settings [S]", false));
+    gui_basic.add(button_load_gui_settings.setup("Load Gui Settings [L]", false));
+    
+    gui_appearance.setup();
+    gui_appearance.setName("Appearance");
+    gui_appearance.loadFont(ofToDataPath("font/DIN Alternate Bold.ttf"), 10);
+    gui_appearance.setPosition(20,20);
+    gui_appearance.setWidthElements(r_class_selector.getWidth()/2);
+
+    gui_appearance.add(color_working_polyline.setup("Color of Working Polyline", ofColor(255,0,0), ofColor(0,0), ofColor(255,255)));
+    gui_appearance.add(color_working_vertex.setup("Color of Working Vertex", ofColor::darkSalmon,ofColor(0,0), ofColor(255,255)));
+    
+    gui_appearance.add(color_train_polyline.setup("Color of Saved Polyline", ofColor::orange, ofColor(0,0), ofColor(255,255)));
+    gui_appearance.add(color_train_vertex.setup("Color of Saved Vertex", ofColor::seaGreen,ofColor(0,0), ofColor(255,255)));
+    gui_appearance.add(alpha_annotation.set("Alpha Value of Region", 50, 1,255));
+    
+//    color_working_polyline.
+
     enableAnnotationControl();
 }
 void ofxOpenCvDnnObjectDetection::setup(string _path_to_cfg, string _path_to_weights, string _path_to_names)
@@ -773,12 +1063,14 @@ void ofxOpenCvDnnObjectDetection::setup(string _path_to_cfg, string _path_to_wei
 
     //net.setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
     // net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+
     //    net.setPreferableBackend(DNN_BACKEND_HALIDE);
 //          net.setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
     //net.setPreferableBackend(DNN_BACKEND_DEFAULT);
 //    net.setPreferableTarget(DNN_TARGET_OPENCL);
 //    net.setPreferableBackend(DNN_BACKEND_OPENCV);
-    //net.setPreferableTarget(DNN_TARGET_OPENCL);
+    net.setPreferableTarget(DNN_TARGET_OPENCL);
 //    net.setPreferableTarget(DNN_TARGET_OPENCL_FP16);
 
     
@@ -852,6 +1144,67 @@ void ofxOpenCvDnnObjectDetection::setNetworkImageSize(int _w, int _h)
 }
 
 
+void ofxOpenCvDnnObjectDetection::loadAnnotationFile(string _path_to_file)
+{
+    if( toggle_check_segmentation == false ){
+        loadBoundingBoxFile(_path_to_file);
+    }
+    else{
+        loadSegmentationFile(_path_to_file);
+    }
+}
+
+void ofxOpenCvDnnObjectDetection::loadSegmentationFile(string _path_to_file)
+{
+    train.clear();
+    vector<string>str_pl;
+    
+    if( !ofFile::doesFileExist(_path_to_file) ){
+        cout << "no such a file" << endl;
+//        ofSystem("touch "+_path_to_file);
+    }
+    ofBuffer ofbuf = ofBufferFromFile(_path_to_file);
+
+    ofbuf.getLines();
+    for( auto line: ofbuf.getLines() ){
+        str_pl.push_back(line);
+    }
+    
+    for( int j = 0; j < str_pl.size(); j++ ){
+        auto string = str_pl[j];
+        auto separator = std::string(" ");
+        auto separator_length = separator.length();
+        auto list = std::vector<std::string>();
+        
+        if (separator_length == 0) {
+            list.push_back(string);
+        }
+        else{
+            auto offset = std::string::size_type(0);
+            while (1) {
+                auto pos = string.find(separator, offset);
+                if (pos == std::string::npos) {
+                    list.push_back(string.substr(offset));
+                    break;
+                }
+                list.push_back(string.substr(offset, pos - offset));
+                offset = pos + separator_length;
+            }
+        }
+        
+        
+        if( list.size() >= 3 ){
+            ofPolyline pl;
+            for( int i = 1; i < list.size(); i+=2 ){
+                pl.addVertex(ofToFloat(list[i])*image_annotation.getWidth(),
+                             ofToFloat(list[i+1])*image_annotation.getHeight());
+            }
+            TrainObject t(ofToInt(list[0]), classNamesVec.at(ofToInt(list[0])), pl);
+            train.push_back(t);
+        }
+    }
+}
+
 void ofxOpenCvDnnObjectDetection::loadBoundingBoxFile(string _path_to_file)
 {
     train.clear();
@@ -906,11 +1259,22 @@ void ofxOpenCvDnnObjectDetection::loadBoundingBoxFile(string _path_to_file)
     }
 }
 
+
 void ofxOpenCvDnnObjectDetection::saveAnnotation()
 {
-    saveBoundingBoxToFile(filename_txt);
-    if( !ofFile::doesFileExist(filename_jpg) ){
-        saveAnnotationImage();
+    // Object Detection
+    if( toggle_check_segmentation == false ){
+        saveBoundingBoxToFile(filename_txt);
+        if( !ofFile::doesFileExist(filename_jpg) ){
+            saveAnnotationImage();
+        }
+    }
+    // Segmentation
+    else{
+        saveSegmentationToFile(filename_txt);
+        if( !ofFile::doesFileExist(filename_jpg) ){
+            saveAnnotationImage();
+        }
     }
 }
 void ofxOpenCvDnnObjectDetection::saveAnnotationImage()
@@ -919,7 +1283,7 @@ void ofxOpenCvDnnObjectDetection::saveAnnotationImage()
 }
 void ofxOpenCvDnnObjectDetection::removeAnnotationFiles()
 {
-    ofSystem("rm "+filename_jpg);
+//    ofSystem("rm "+filename_jpg);
     ofSystem("rm "+filename_txt);
 }
 void ofxOpenCvDnnObjectDetection::loadAnnotationDir(string _path_to_file)
@@ -932,16 +1296,21 @@ void ofxOpenCvDnnObjectDetection::loadAnnotationDir(string _path_to_file)
     dir_annotation = dir_annotation.getSorted();
 
     filename_jpg = dir_annotation.getPath(pos_annotation_file);
-    filename_txt = Replace(dir_annotation.getPath(pos_annotation_file),".jpg", ".txt");
+    if( toggle_check_segmentation ){
+        filename_txt = Replace(dir_annotation.getPath(pos_annotation_file),".jpg", ".txt");
+    }
+    else{
+        filename_txt = Replace(dir_annotation.getPath(pos_annotation_file),".jpg", ".txt");
+    }
 
     // Load first jpg image
     loadAnnotationImage(filename_jpg);
-    loadBoundingBoxFile(filename_txt);
+    loadAnnotationFile(filename_txt);
 }
 void ofxOpenCvDnnObjectDetection::loadAnnotationImage(string _path_to_file)
 {
     image_annotation.load(_path_to_file);
-    update(image_annotation.getPixels());
+//    update(image_annotation.getPixels());
 }
 
 void ofxOpenCvDnnObjectDetection::saveBoundingBoxToFile(string _path_to_file)
@@ -960,13 +1329,61 @@ void ofxOpenCvDnnObjectDetection::saveBoundingBoxToFile(string _path_to_file)
         }
         file.close();
         train.clear();
-        loadBoundingBoxFile(_path_to_file);
+        loadAnnotationFile(_path_to_file);
     }
     else{
         cout << "Failed: _path_to_file: " + _path_to_file << endl;
     }
+}
+
+void ofxOpenCvDnnObjectDetection::deleteAnnotation(int _position)
+{
+    // 指定された行番号のアノテーションを削除
+    ofFile file;
+    if( file.open(filename_txt, ofFile::WriteOnly) ){
+        cout << filename_txt << endl;
+        for( int i = 0; i < train.size(); i++){
+            if( _position != i ){
+                file << train[i].id;
+                for( int j = 0; j < train[i].p.getVertices().size(); j++ ){
+                    file << " " << train[i].p.getVertices()[j].x/image_annotation.getWidth();
+                    file << " " << train[i].p.getVertices()[j].y/image_annotation.getHeight();
+                }
+                file << endl;
+            }
+        }
+        file.close();
+        train.clear();
+        loadSegmentationFile(filename_txt);
+    }
+    else{
+        cout << "Failed: _path_to_file: " + filename_txt << endl;
+    }
     
 }
+
+void ofxOpenCvDnnObjectDetection::saveSegmentationToFile(string _path_to_file)
+{
+    ofFile file;
+    if( file.open(_path_to_file, ofFile::WriteOnly) ){
+        cout << filename_txt << endl;
+        for( int i = 0; i < train.size(); i++){
+            file << train[i].id;
+            for( int j = 0; j < train[i].p.getVertices().size(); j++ ){
+                file << " " << train[i].p.getVertices()[j].x/image_annotation.getWidth();
+                file << " " << train[i].p.getVertices()[j].y/image_annotation.getHeight();
+            }
+            file << endl;
+        }
+        file.close();
+        train.clear();
+        loadSegmentationFile(_path_to_file);
+    }
+    else{
+        cout << "Failed: _path_to_file: " + _path_to_file << endl;
+    }
+}
+
 
 void ofxOpenCvDnnObjectDetection::setAnnotationFilename(string _filename)
 {
@@ -984,7 +1401,7 @@ void ofxOpenCvDnnObjectDetection::setNextAnnotation()
     filename_jpg = dir_annotation.getPath(pos_annotation_file);
     filename_txt = Replace(dir_annotation.getPath(pos_annotation_file),".jpg", ".txt");
     loadAnnotationImage(filename_jpg);
-    loadBoundingBoxFile(filename_txt);
+    loadAnnotationFile(filename_txt);
 }
 
 void ofxOpenCvDnnObjectDetection::setPreviousAnnotation()
@@ -997,7 +1414,7 @@ void ofxOpenCvDnnObjectDetection::setPreviousAnnotation()
     filename_jpg = dir_annotation.getPath(pos_annotation_file);
     filename_txt = Replace(dir_annotation.getPath(pos_annotation_file),".jpg", ".txt");
     loadAnnotationImage(filename_jpg);
-    loadBoundingBoxFile(filename_txt);
+    loadAnnotationFile(filename_txt);
 }
 
 void ofxOpenCvDnnObjectDetection::adjustGuiComponents()
@@ -1021,7 +1438,6 @@ void ofxOpenCvDnnObjectDetection::setPositionAnnotation(int _pos, string _text_s
     }
     else{
         vector<string>search_id = split(_text_search_id, ',');
-        //here
     }
     
     pos_annotation_file = _pos;
@@ -1034,7 +1450,7 @@ void ofxOpenCvDnnObjectDetection::setPositionAnnotation(int _pos, string _text_s
     filename_jpg = dir_annotation.getPath(pos_annotation_file);
     filename_txt = Replace(dir_annotation.getPath(pos_annotation_file),".jpg", ".txt");
     loadAnnotationImage(filename_jpg);
-    loadBoundingBoxFile(filename_txt);
+    loadAnnotationFile(filename_txt);
     adjustGuiComponents();
     
 }
@@ -1093,6 +1509,12 @@ void ofxOpenCvDnnObjectDetection::addTrainObject(int _class_id_selected, ofRecta
 {
     class_id_selected = _class_id_selected;
     train.push_back(TrainObject(class_id_selected, classNamesVec.at(class_id_selected), _r));
+}
+
+void ofxOpenCvDnnObjectDetection::addTrainObject(int _class_id_selected, ofPolyline _p)
+{
+    class_id_selected = _class_id_selected;
+    train.push_back(TrainObject(class_id_selected, classNamesVec.at(class_id_selected), _p));
 }
 
 
@@ -1159,8 +1581,15 @@ void ofxOpenCvDnnObjectDetection::drawReconfirmAnnotation()
     
 }
 
+void ofxOpenCvDnnObjectDetection::annotationSelect(bool &_mode)
+{
+    
+}
+
+
 void ofxOpenCvDnnObjectDetection::changeThreshold(float &_th)
 {
+    setConfidenceThreshold(_th);
     if( image_annotation.isAllocated() ){
       update(image_annotation.getPixels());
     }
@@ -1179,6 +1608,7 @@ void ofxOpenCvDnnObjectDetection::changeSeekbar(int &_frame)
         train.clear();
         setPositionAnnotation(_frame, text_search_id);
     }
+
 }
 
 void ofxOpenCvDnnObjectDetection::changeDarkMode(bool & _mode)
@@ -1204,6 +1634,20 @@ void ofxOpenCvDnnObjectDetection::backAnnotationButton()
     if( seekbar > 0 )seekbar--;
 }
 
+void ofxOpenCvDnnObjectDetection::saveGuiSettings()
+{
+    gui_basic.saveToFile(ofToDataPath("gui_settings/gui_basic.xml"));
+    gui_appearance.saveToFile(ofToDataPath("gui_settings/gui_appearance.xml"));
+    ofSystemAlertDialog("GUIの設定項目を保存しました");
+
+}
+
+void ofxOpenCvDnnObjectDetection::loadGuiSettings()
+{
+    gui_basic.loadFromFile(ofToDataPath("gui_settings/gui_basic.xml"));
+    gui_appearance.loadFromFile(ofToDataPath("gui_settings/gui_appearance.xml"));
+}
+
 void ofxOpenCvDnnObjectDetection::mouseMoved(ofMouseEventArgs &e)
 {
     float x = e.x;
@@ -1224,16 +1668,30 @@ void ofxOpenCvDnnObjectDetection::mouseDragged(ofMouseEventArgs &e)
 {
     float x = e.x;
     float y = e.y;
-    is_dragging = true;
-    ofRectangle r_img;
-    float w,h;
-    switch( mode_annotation )
-    {
+    if( toggle_check_segmentation == false ){
+        
+        is_dragging = true;
+        ofRectangle r_img;
+        float w,h;
+        switch( mode_annotation )
+        {
+        }
+        r_img.set(0,0, image_annotation.getWidth(), image_annotation.getHeight());
+        if( r_img.inside(x,y) ){
+            r.width = x-r.x;
+            r.height = y-r.y;
+        }
     }
-    r_img.set(0,0, image_annotation.getWidth(), image_annotation.getHeight());
-    if( r_img.inside(x,y) ){
-        r.width = x-r.x;
-        r.height = y-r.y;
+    else{
+        // 頂点座標を移動しているとき．該当するtrainの頂点の座標を変更していく
+        if( dragging_points.size() > 0 ){
+            is_dragging_points = true;
+            cout << "hello" << endl;
+            for( int i = 0; i < dragging_points.size(); i++){
+                DraggingPoint dp = dragging_points[i];
+                train[dp.id].p.getVertices()[dp.id_point] =  ofPoint(x,y);
+            }
+        }
     }
 }
 
@@ -1244,30 +1702,57 @@ void ofxOpenCvDnnObjectDetection::mousePressed(ofMouseEventArgs &e)
     float y = e.y;
     r.set(x,y,0,0);
     
+    
     if( flg_show_yolo_detection == false ){
+        //
         for( int i = 0; i < train.size(); i++ ){
-            if( train.at(i).getScaledBB(image_annotation.getWidth(), image_annotation.getHeight()).inside(x,y)){
-                train.erase(train.begin()+i);
-                saveAnnotation();
-                if(mode_annotation == MODE_VIDEO_ANNOTATION ||
-                   mode_annotation == MODE_CAMERA_ANNOTATION ){
-                    if( train.size() == 0 ){
-                        removeAnnotationFiles();
+
+            // Object Detection の削除
+            if( toggle_check_segmentation == false ){
+                if( train.at(i).getScaledBB(image_annotation.getWidth(), image_annotation.getHeight()).inside(x,y)){
+                    train.erase(train.begin()+i);
+                    saveAnnotation();
+                    if(mode_annotation == MODE_VIDEO_ANNOTATION ||
+                       mode_annotation == MODE_CAMERA_ANNOTATION ){
+                        if( train.size() == 0 ){
+                            removeAnnotationFiles();
+                        }
                     }
                 }
             }
         }
+
     }
     else{
+        // 自動検出矩形領域上でクリックされたらその矩形領域を登録する
         for( int i = 0; i < object.size(); i++ ){
-            if( object.at(i).getScaledBB(image_annotation.getWidth(),                                              image_annotation.getHeight()).inside(x,y) ){
-                
-                
-                addTrainObject(object.at(i).class_id,
-                               object.at(i).r);
-                saveAnnotation();
+            if( toggle_check_segmentation == false ){
+                if( object.at(i).getScaledBB(image_annotation.getWidth(),                                              image_annotation.getHeight()).inside(x,y) ){
+                    addTrainObject(object.at(i).class_id,
+                                   object.at(i).r);
+                    saveAnnotation();
+                }
+            }
+            
+        }
+    }
+    
+    if( toggle_check_segmentation == true ){
+        is_dragging_points = false;
+        dragging_points.clear();
+        for( int i = 0; i < train.size(); i++ ){
+            for( int j = 0; j < train[i].p.getVertices().size(); j++){
+                ofPoint pos = train[i].p.getVertices()[j];
+                if( ofDist(x,y, pos.x, pos.y) <= snapsize){
+                    DraggingPoint dp;
+                    dp.p = pos;
+                    dp.id = i;
+                    dp.id_point = j;
+                    dragging_points.push_back(dp);
+                }
             }
         }
+
     }
     
     
@@ -1280,6 +1765,7 @@ void ofxOpenCvDnnObjectDetection::mouseReleased(ofMouseEventArgs &e)
     float x = e.x;
     float y = e.y;
     is_dragging = false;
+    
     r.width = x-r.x;
     r.height = y-r.y;
     r.standardize();
@@ -1300,20 +1786,96 @@ void ofxOpenCvDnnObjectDetection::mouseReleased(ofMouseEventArgs &e)
         
     }
     
-    
     ofRectangle r_img;
     r_img.set(0,0, image_annotation.getWidth(), image_annotation.getHeight());
-    if( r.getArea() > 10 &&  r_img.inside(x,y) ){
-        r.x = r.x/image_annotation.getWidth();
-        r.y = r.y/image_annotation.getHeight();
-        r.width = r.width/image_annotation.getWidth();
-        r.height = r.height/image_annotation.getHeight();
-        
-        addTrainObject(class_id_selected, r);
-        saveAnnotation();
+    if( toggle_check_segmentation == false){
+        if( r.getArea() > 10 &&  r_img.inside(x,y) ){
+            r.x = r.x/image_annotation.getWidth();
+            r.y = r.y/image_annotation.getHeight();
+            r.width = r.width/image_annotation.getWidth();
+            r.height = r.height/image_annotation.getHeight();
+            
+            addTrainObject(class_id_selected, r);
+            saveAnnotation();
+        }
+        r.set(0,0,0,0);
     }
-    r.set(0,0,0,0);
-    
+    else{
+        
+        // ドラッグ操作の終わりにおけるマウスreleaseの場合
+        if( is_dragging_points == true ){
+            is_dragging_points = false;
+            saveAnnotation();
+            return;
+        }
+        // Segmentation の削除
+        for( int i = 0; i < train.size(); i++ ){
+            if(train[i].p.inside(ofGetMouseX(), ofGetMouseY()) &&
+               p.getVertices().size() == 0 ){
+                
+                // 該当するどの頂点座標上にもマウスポインタがないかを確認
+                bool is_not_on_any_point = true;
+                for( int j = 0; j < train[i].p.getVertices().size();j++){
+                    if( ofDist(x,y,
+                               train[i].p.getVertices()[j].x,
+                               train[i].p.getVertices()[j].y) <= snapsize){
+                        is_not_on_any_point = false;
+                    }
+                }
+                
+                if( is_not_on_any_point == true ){
+                    // 削除するデータを一時保存しておく
+                    train_cache.push_back(train.at(i));
+                    train.erase(train.begin()+i);
+                    saveAnnotation();
+                    if( train.size() == 0 ){
+                        removeAnnotationFiles();
+                    }
+                    
+                    return;
+                }
+            }
+
+        }
+            
+
+        // 画像内でのマウスReleasedだったら新しい頂点を追加する、または最新頂点の座標上であれば Enterキーを押したとき同様の振る舞い（データ追加）を行う
+        ofRectangle r_img;
+        r_img.set(0,0, image_annotation.getWidth(), image_annotation.getHeight());
+        if( r_img.inside(x,y)){
+            
+            ofPoint p_last;
+            // 3頂点は面を作成するためには必須
+            if( p.getVertices().size() >= 3 ){
+                p_last = p.getVertices()[0];
+            }
+            
+            // pの最初の座標をクリックして面を作成するとき
+            if( p.getVertices().size() >= 3 && ofDist(x,y,p_last.x, p_last.y) <= snapsize ){
+                addTrainObject(class_id_selected, p);
+                saveAnnotation();
+                p.clear();
+            }
+            // それ以外は、他のtrainオブジェクト座標をクリックしていないかをチェックして、
+            // どこかの頂点クリックであれば追加する座標は当該頂点座標にグリッドする
+            else{
+                float x_add = x;
+                float y_add = y;
+                for( int i = 0; i < train.size(); i++ ){
+                    ofPolyline pl = train[i].p;
+                    for( int j = 0; j < pl.getVertices().size(); j++ ){
+                        ofPoint pos = pl.getVertices()[j];
+                        if( ofDist(pos.x, pos.y, x, y) <= snapsize ){
+                            x_add = pos.x;
+                            y_add = pos.y;
+                        }
+                    }
+                }
+                p.addVertex(x_add,y_add);
+            }
+            
+        }
+    }
     
 }
 
@@ -1383,7 +1945,7 @@ void ofxOpenCvDnnObjectDetection::dragEvent(ofDragInfo &dragInfo){
         setAnnotationFilename(str);
         mode_annotation = MODE_IMAGE_ANNOTATION;
         loadAnnotationImage(filename_jpg);
-        loadBoundingBoxFile(filename_txt);
+        loadAnnotationFile(filename_txt);
         adjustGuiComponents();
         
     }
