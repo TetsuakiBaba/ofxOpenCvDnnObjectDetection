@@ -30,8 +30,8 @@ My annotation software to export a yolo format. It enables you to annotate image
 ### 4. Open the project with IDE(xcode) and just run.
 
 ## Compatibility
-- only macOS ( tested on Catalina 10.15)
-- oF version: 0.11.0
+- only macOS ( tested on Catalina 10.15, sonoma 14.2.1)
+- oF version: 0.11.0, 0.12.0
 
 ## If you wanna get faster inference time.
 Openframeworks(version.0.11.0) includes opencv-4.0.1 for ofxOpenCv addon. But you can get faster inference time by using local-compiled opencv library. Here is my inference time result on each dnn object detection.
