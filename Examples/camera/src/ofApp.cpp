@@ -9,8 +9,8 @@ void ofApp::setup(){
     camera.initGrabber( 1280, 720 );
     ofSetWindowShape(camera.getWidth(), camera.getHeight());
     detector.setNetworkImageSize(416, 416);
-    detector.setup(ofToDataPath("dnn/yolov3-spp.cfg"),
-                   ofToDataPath("dnn/yolov3-spp.weights"),
+    detector.setup(ofToDataPath("dnn/yolov2-tiny.cfg"),
+                   ofToDataPath("dnn/yolov2-tiny.weights"),
                    ofToDataPath("dnn/coco.txt"));
     
     // For Video detection example
