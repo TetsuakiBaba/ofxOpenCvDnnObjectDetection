@@ -23,9 +23,9 @@ My annotation software to export a yolo format. It enables you to annotate image
 
 ## Getting Started with Examples/single_image.
 ### 1. Clone ofxOpenCvDnnObjectDetection to your of/addon directory
-    $ git clone https://github.com/TetsuakiBaba/ofxOpenCvDnnObjectDetection.git
+    git clone https://github.com/TetsuakiBaba/ofxOpenCvDnnObjectDetection.git
 ### 2. Download models
-    $ sh getWeights.sh
+    sh getWeights.sh
 ### 3. Open a project generator and import Example/single_image. Then click the update button.
 ### 4. Open the project with IDE(xcode) and just run.
 
